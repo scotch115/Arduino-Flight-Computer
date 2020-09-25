@@ -140,7 +140,7 @@ void showNewNumber() {
     lcd.print(received[1]);
     lcd.setCursor(0,1);
     lcd.print("Z: ");
-    lcd.print(received[2]);
+    lcd.print(received[2]); 
     newData = false;
     memset(received, 0, sizeof(received));\
   }
