@@ -21,6 +21,7 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
 #include <LiquidCrystal.h> 
+#include <SoftwareSerial.h>
 
 #define BME_SCK 13
 #define BME_MISO 12
@@ -35,11 +36,14 @@ Adafruit_BME280 bme; // I2C
 
 unsigned long delayTime;
 LiquidCrystal lcd(7, 8, 9, 10, 11, 12);
+const byte numChars = 3; // X, Y, Z data points
+int received[numChars];
+boolean newData = false;
 
-
-
+SoftwareSerial serialIn(3, 2); // RX, TX
 void setup() {
     Serial.begin(9600);
+    serialIn.begin(57600);
     while(!Serial);    // time to get serial running
     Serial.println(F("BME280 test"));
 
@@ -73,10 +77,73 @@ void setup() {
 
 
 void loop() { 
+
+    
     printValues(1);
     delay(delayTime);
     printValues(2);
     delay(delayTime);
+    printValues(3);
+    delay(delayTime);
+//    printValues(3);
+//    delay(delayTime);
+//    printValues(3);
+//    delay(delayTime);
+
+
+   // Attempting to connect Arduino Pro Micro with LIS3DH accelerometer to Arduino Nano with LCD and BME280 Temperature sensor  
+    Serial.println("==Checking for Wire.==");
+    recvWithEndMarker();
+    showNewNumber();
+    delay(delayTime);
+}
+
+void recvWithEndMarker() {
+    static byte ndx = 0;
+    static byte rCounter = 0;
+    char endMarker = '\n';
+    byte rc;
+    
+    while (serialIn.available() > 0 && newData == false) {
+//        Serial.println("==ProMicro detected!==");
+        rc = serialIn.read();
+//        Serial.println(serialIn.read());
+        
+
+        if (rCounter != 3) {
+            received[ndx] = rc;
+            ndx++;
+            rCounter++;
+        }
+        else {
+//            received[ndx] = '\0'; // terminate the string
+            ndx = 0;
+            rCounter = 0;
+            newData = true;
+        }
+    }
+}
+
+void showNewNumber() {
+  if (newData == true) {
+    Serial.println("Data received: ");
+    Serial.print("X: ");
+    Serial.println(received[0]);
+    Serial.print("Y: ");
+    Serial.println(received[1]);
+    Serial.print("Z: ");
+    Serial.println(received[2]);
+    lcd.clear();
+    lcd.print("X: ");
+    lcd.print(received[0]);
+    lcd.print(" Y: ");
+    lcd.print(received[1]);
+    lcd.setCursor(0,1);
+    lcd.print("Z: ");
+    lcd.print(received[2]);
+    newData = false;
+    memset(received, 0, sizeof(received));\
+  }
 }
 
 
@@ -111,10 +178,23 @@ void printValues(int i) {
       lcd.clear();
       lcd.print("Press: ");
       lcd.print(bme.readPressure() / 100.0F);
-      lcd.print(" hPa");
+      lcd.print("hPa");
       lcd.setCursor(0, 1);
       lcd.print("Alt: ");
       lcd.print(bme.readAltitude(SEALEVELPRESSURE_HPA));
+      lcd.print("hPa");
+    } else if ( i == 3) {
+      lcd.clear();
+      lcd.print("T:");
+      lcd.print(bme.readTemperature(), 0);
+      lcd.print("*C/H:");
+      lcd.print(bme.readHumidity(), 0);
+      lcd.print("%");
+      lcd.setCursor(0, 1);
+      lcd.print("P:");
+      lcd.print((bme.readPressure() / 100.0F), 0);
+      lcd.print("/A:");
+      lcd.print(bme.readAltitude(SEALEVELPRESSURE_HPA),0);
       lcd.print("hPa");
     }
 
