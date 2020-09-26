@@ -8,12 +8,12 @@ This is a prototype for a future project which will incorporate this weather sta
 # PCB Schematics
 ## MK I
 The MK I PCB was unfortunately unsuccessful, as I used the EasyEDA autoroute feature to try to solve track placement issues, however it did not take into account the possiblity of shorting the circuits, and neither did I, so my Arduino Nano blew a capacitor. Thankfully I have more, but this board was immediately decommissioned.
-![](images/Mk_I_F.png)
-![](images/Mk_I_B.png)
+![](Images/Mk_I_F.png)
+![](Images/Mk_I_B.png)
 
 ## MK II
 The MK II PCB was carefully redesigned to improve upon the Mk I's failures by utilizing better component placement, built-in grounding pads, and hand-drawn track placement. (Blue also seemed like it might look nicer.) 
 > This board is currently in production, and has not shipped yet, will update status and results once board arrives
 
-![](images/Mk_II_F.png)
-![](images/Mk_II_B.png)
+![](Images/Mk_II_F.png)
+![](Images/Mk_II_B.png)
