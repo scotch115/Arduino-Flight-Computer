@@ -23,12 +23,13 @@
 #include <LiquidCrystal.h> 
 #include <SoftwareSerial.h>
 
+
 #define BME_SCK 13
 #define BME_MISO 12
 #define BME_MOSI 11
 #define BME_CS 10
 
-#define SEALEVELPRESSURE_HPA (1013.25)
+#define SEALEVELPRESSURE_HPA (1016.9)
 
 Adafruit_BME280 bme; // I2C
 //Adafruit_BME280 bme(BME_CS); // hardware SPI
@@ -45,7 +46,7 @@ void setup() {
     Serial.begin(9600);
     serialIn.begin(57600);
     while(!Serial);    // time to get serial running
-    Serial.println(F("BME280 test"));
+//    Serial.println(F("BME280 test"));
 
     unsigned status;
     
@@ -63,10 +64,10 @@ void setup() {
         while (1) delay(10);
     }
     
-    Serial.println("-- Default Test --");
+//    Serial.println("-- Default Test --");
     delayTime = 1000;
 
-    Serial.println();
+//    Serial.println();
 
     lcd.begin(16, 2);
     lcd.print("BME280 Sensor");
@@ -77,25 +78,43 @@ void setup() {
 
 
 void loop() { 
-
+  // Multiple calls to serialValues() between calls to printValues() to create manual delay on lcd without delaying serial output. Bad implementation but works for now
     
     printValues(1);
-    delay(delayTime);
+    serialValues();
+    serialValues();
+    serialValues();
+    serialValues();
+    serialValues();
+    serialValues();
+    serialValues();
+    serialValues();
+    serialValues();
+    serialValues();
+    serialValues();
+    serialValues();
     printValues(2);
-    delay(delayTime);
-    printValues(3);
-    delay(delayTime);
-//    printValues(3);
-//    delay(delayTime);
-//    printValues(3);
-//    delay(delayTime);
+    serialValues();
+    serialValues();
+    serialValues();
+    serialValues();
+    serialValues();
+    serialValues();
+    serialValues();
+    serialValues();
+    serialValues();
+    serialValues();
+    serialValues();
+    serialValues();
+//    printValues(3); // For LCD Testing Purposes only
+//    delay(delayTime); 
 
 
    // Attempting to connect Arduino Pro Micro with LIS3DH accelerometer to Arduino Nano with LCD and BME280 Temperature sensor  
-    Serial.println("==Checking for Wire.==");
-    recvWithEndMarker();
-    showNewNumber();
-    delay(delayTime);
+//    Serial.println("==Checking for Wire.==");
+//    recvWithEndMarker();
+//    showNewNumber();
+//    delay(delayTime);
 }
 
 void recvWithEndMarker() {
@@ -142,29 +161,33 @@ void showNewNumber() {
     lcd.print("Z: ");
     lcd.print(received[2]); 
     newData = false;
-    memset(received, 0, sizeof(received));\
+    memset(received, 0, sizeof(received));
   }
 }
 
-
-void printValues(int i) {
-    Serial.print("Temperature = ");
+void serialValues() {
+   Serial.print("{\"Temperature\":");
     Serial.print(bme.readTemperature());
-    Serial.println(" *C");
+    Serial.print(",");
 
-    Serial.print("Pressure = ");
+    Serial.print("\"Pressure\":");
 
     Serial.print(bme.readPressure() / 100.0F);
-    Serial.println(" hPa");
+    Serial.print(",");
 
-    Serial.print("Approx. Altitude = ");
+    Serial.print("\"Altitude\":");
     Serial.print(bme.readAltitude(SEALEVELPRESSURE_HPA));
-    Serial.println(" m");
+    Serial.print(",");
 
-    Serial.print("Humidity = ");
+    Serial.print("\"Humidity\":");
     Serial.print(bme.readHumidity());
-    Serial.println(" %");
+    Serial.println("}");
+}
 
+
+
+void printValues(int i) {
+  serialValues();
     if (i == 1) {
       lcd.clear();
       lcd.print("Temp: ");
@@ -182,7 +205,7 @@ void printValues(int i) {
       lcd.setCursor(0, 1);
       lcd.print("Alt: ");
       lcd.print(bme.readAltitude(SEALEVELPRESSURE_HPA));
-      lcd.print("hPa");
+      lcd.print("m");
     } else if ( i == 3) {
       lcd.clear();
       lcd.print("T:");
@@ -195,10 +218,6 @@ void printValues(int i) {
       lcd.print((bme.readPressure() / 100.0F), 0);
       lcd.print("/A:");
       lcd.print(bme.readAltitude(SEALEVELPRESSURE_HPA),0);
-      lcd.print("hPa");
+      lcd.print("m");
     }
-
-    
-    Serial.println();
-
 }
