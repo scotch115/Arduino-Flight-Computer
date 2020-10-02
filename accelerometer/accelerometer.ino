@@ -7,11 +7,11 @@
 #include <SoftwareSerial.h>
 
 // Used for software SPI
-#define LIS3DH_CLK 12
-#define LIS3DH_MISO 11
-#define LIS3DH_MOSI 10
+#define LIS3DH_CLK 9
+#define LIS3DH_MISO 8
+#define LIS3DH_MOSI 7
 // Used for hardware & software SPI
-#define LIS3DH_CS 9
+#define LIS3DH_CS 6
 
 // software SPI
 Adafruit_LIS3DH lis = Adafruit_LIS3DH(LIS3DH_CS, LIS3DH_MOSI, LIS3DH_MISO, LIS3DH_CLK);
@@ -24,22 +24,22 @@ SoftwareSerial sout(2, 3); // RX, TX
 
 void setup(void) {
   sout.begin(9600);
-//  while (!Serial) delay(10);     // will pause Zero, Leonardo, etc until serial console opens
-//
-//  Serial.println("LIS3DH test!");
-//
-//  if (! lis.begin(0x18)) {   // change this to 0x19 for alternative i2c address
-//    Serial.println("Couldnt start");
-//    while (1) yield();
-//  }
+  while (!Serial) delay(10);     // will pause Zero, Leonardo, etc until serial console opens
+
+  Serial.println("LIS3DH test!");
+
+  if (! lis.begin(0x18)) {   // change this to 0x19 for alternative i2c address
+    Serial.println("Couldnt start");
+    while (1) yield();
+  }
    sout.write("LIS3DH found!");
-//
+
    lis.setRange(LIS3DH_RANGE_4_G);   // 2, 4, 8 or 16 G!
-//
-    sout.write("Range = ");
-    sout.write(2 << lis.getRange());
-    sout.write("G");
-//
+
+    Serial.print("Range = ");
+    Serial.print(2 << lis.getRange());
+    Serial.print("G");
+
   lis.setDataRate(LIS3DH_DATARATE_50_HZ);
   sout.write("Data rate set to: ");
   switch (lis.getDataRate()) {
@@ -77,10 +77,6 @@ void loop() {
   sout.write(lis.y);
   sout.write(lis.z);
 
-//    sout.write(event.acceleration.x);
-//    sout.write(event.acceleration.y);
-//    sout.write(event.acceleration.z);
-
   /* Display the results (acceleration is measured in m/s^2) */
   /* For testing purposes */
 //  Serial.print("\t\tX: "); Serial.print(event.acceleration.x);
@@ -90,5 +86,5 @@ void loop() {
 
   Serial.println();
 
-  delay(200);
+  delay(50);
 }
