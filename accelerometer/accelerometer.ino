@@ -20,10 +20,11 @@ Adafruit_LIS3DH lis = Adafruit_LIS3DH(LIS3DH_CS, LIS3DH_MOSI, LIS3DH_MISO, LIS3D
 // I2C
 //Adafruit_LIS3DH lis = Adafruit_LIS3DH();
 
-SoftwareSerial sout(2, 3); // RX, TX
+//SoftwareSerial sout(2, 3); // RX, TX
 
 void setup(void) {
-  sout.begin(9600);
+  Serial.begin(9600);
+  Wire.begin();
   while (!Serial) delay(10);     // will pause Zero, Leonardo, etc until serial console opens
 
   Serial.println("LIS3DH test!");
@@ -32,7 +33,7 @@ void setup(void) {
     Serial.println("Couldnt start");
     while (1) yield();
   }
-   sout.write("LIS3DH found!");
+   Serial.print("LIS3DH found!");
 
    lis.setRange(LIS3DH_RANGE_4_G);   // 2, 4, 8 or 16 G!
 
@@ -41,15 +42,15 @@ void setup(void) {
     Serial.print("G");
 
   lis.setDataRate(LIS3DH_DATARATE_50_HZ);
-  sout.write("Data rate set to: ");
+  Serial.write("Data rate set to: ");
   switch (lis.getDataRate()) {
-    case LIS3DH_DATARATE_1_HZ: sout.write("1 Hz"); break;
-    case LIS3DH_DATARATE_10_HZ: sout.write("10 Hz"); break;
-    case LIS3DH_DATARATE_25_HZ: sout.write("25 Hz"); break;
-    case LIS3DH_DATARATE_50_HZ: sout.write("50 Hz"); break;
-    case LIS3DH_DATARATE_100_HZ: sout.write("100 Hz"); break;
-    case LIS3DH_DATARATE_200_HZ: sout.write("200 Hz"); break;
-    case LIS3DH_DATARATE_400_HZ: sout.write("400 Hz"); break;
+    case LIS3DH_DATARATE_1_HZ: Serial.write("1 Hz"); break;
+    case LIS3DH_DATARATE_10_HZ: Serial.write("10 Hz"); break;
+    case LIS3DH_DATARATE_25_HZ: Serial.write("25 Hz"); break;
+    case LIS3DH_DATARATE_50_HZ: Serial.write("50 Hz"); break;
+    case LIS3DH_DATARATE_100_HZ: Serial.write("100 Hz"); break;
+    case LIS3DH_DATARATE_200_HZ: Serial.write("200 Hz"); break;
+    case LIS3DH_DATARATE_400_HZ: Serial.write("400 Hz"); break;
 
 
    case LIS3DH_DATARATE_POWERDOWN: Serial.println("Powered Down"); break;
@@ -58,7 +59,13 @@ void setup(void) {
   }
 }
 
+
+
 void loop() {
+  char strx[4];
+  char stry[4];
+  char strz[4];
+  
   lis.read();      // get X Y and Z data at once
   // Then print out the raw data
   Serial.print("X:  "); 
@@ -67,16 +74,24 @@ void loop() {
   Serial.print(lis.y);
   Serial.print("  \tZ:  "); 
   Serial.print(lis.z);
-  
+
+  itoa(lis.x, strx, 10);
+  itoa(lis.y, stry, 10);
+  itoa(lis.z, strz, 10);
+  Serial.write(strx);
+  Serial.write(stry);
+  Serial.write(strz);
+
+//  Wire.write(lis.x);
+//  Wire.write(lis.y);
+//  Wire.write(lis.z);
+//  Wire.endTransmission();
   
   /* Or....get a new sensor event, normalized */
   sensors_event_t event;
   lis.getEvent(&event);
 
-  sout.write(lis.x);
-  sout.write(lis.y);
-  sout.write(lis.z);
-
+  
   /* Display the results (acceleration is measured in m/s^2) */
   /* For testing purposes */
 //  Serial.print("\t\tX: "); Serial.print(event.acceleration.x);
