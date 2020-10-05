@@ -16,6 +16,7 @@ Phase 5: Test rocket design and launch! 🚀
 ## PCB Schematics
 ### MK I
 The MK I PCB was unfortunately unsuccessful, as I used the EasyEDA autoroute feature to try to solve track placement issues, however it did not take into account the possiblity of shorting the circuits, and neither did I, so my Arduino Nano blew a capacitor. Thankfully I have more, but this board was immediately decommissioned.
+
 <img src="Images/Mk_I_F.png" width="60%" />
 <img src="Images/Mk_I_B.png" width="60%" />
 
