@@ -13,11 +13,16 @@
 #define ESP32_GPIO0    6
 
 
-unsigned long delayTime;
+unsigned long delayTime = 2000;
 
 IPAddress remoteIp(192, 168, 1, 65);
-unsigned int localPort = 2391;      // local port to listen on
+unsigned int localPort = 8888;      // local port to listen on
 WiFiUDP Udp;
+
+// unsigned int remotePort = 2930;
+
+char packetBuffer[255];
+char ReplyBuffer[255];
 
 
 void setup() {
@@ -28,16 +33,17 @@ void setup() {
   unsigned status;
   unsigned wStatus;
 
-  char groundControlDetected[100];
+  char groundControlDetected[100], flightCPU[100];
   int j = 0;
   int sizeOf = 100;
   int offset = 0;
   String gStr = "Ground Control Detected.";
+  String reply = "Connection established, vehicle should be prepped for launch.";
   
   while((j<sizeOf))
   {
-     groundControlDetected[j+offset]=gStr[j];
-      
+     groundControlDetected[j+offset]=gStr[j];      
+     ReplyBuffer[j+offset]=reply[j];
      j++;
   }
 
@@ -55,23 +61,39 @@ void setup() {
     delay(100);
   } while (wStatus != WL_CONNECTED);
   printWifiStatus();
+
   Udp.begin(localPort);
 
   Udp.beginPacket(remoteIp, 2931);
-  if (wStatus) {
-    Udp.write(groundControlDetected);
-  }
+  Udp.write(groundControlDetected);
   Udp.endPacket();
-  delay(2000);
+
+  
 
 }
 
 void loop() {
   unsigned status;
-  Serial.print("Awaiting commands");
-  while (!status) {
-      Serial.print(".");
+  
+    
+  // Check for packet data from flight cpu
+  int packetSize = Udp.parsePacket();
+  if (packetSize) {
+      IPAddress remote = Udp.remoteIP();
+      int len = Udp.read(packetBuffer, 255);
+      if (len > 0) {
+          packetBuffer[len] = 0;
+      }
+      Serial.print("Received: ");
+      Serial.println(packetBuffer);
+
+      Udp.beginPacket(Udp.remoteIP(), Udp.remotePort());
+      Udp.write(ReplyBuffer);
+      Udp.endPacket();
   }
+
+  delay(delayTime);
+  
 }
 
 void printWifiStatus() {

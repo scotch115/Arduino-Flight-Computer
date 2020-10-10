@@ -38,9 +38,11 @@ unsigned long delayTime;
 //LiquidCrystal lcd(7, 8, 9, 10, 11, 12);
 
 IPAddress remoteIp(192, 168, 1, 65);
-unsigned int localPort = 2391;      // local port to listen on
+IPAddress groundIp(192, 168, 1, 153);
+unsigned int localPort = 2390;      // local port to listen on
 WiFiUDP Udp;
 
+char packetBuffer[255];
 
 void setup() {
   Serial.begin(9600);
@@ -50,7 +52,7 @@ void setup() {
   unsigned status;
   unsigned lStatus;
   unsigned wStatus;
-  char bmeDetected[100], lisDetected[100], airDetected[100], startupCompleted[100], continuityPass[100], continuityFail[100];
+  char bmeDetected[100], lisDetected[100], airDetected[100], startupCompleted[100], flightCPU[100];
   int j = 0;
   int sizeOf = 100;
   int offset = 0;
@@ -58,8 +60,9 @@ void setup() {
   String lStr = "LIS3DH Detected.";
   String aStr = "AirLift Featherwing Detected.";
   String sStr = "Startup process completed, beginning sensor scans.";
-  String cPStr = "Flight Computer has continuity on tested pin";
-  String cFStr = "Flight Computer does not have continuity on tested pin";
+  // String cPStr = "Flight Computer has continuity on tested pin";
+  // String cFStr = "Flight Computer does not have continuity on tested pin";
+  String fStr = "Flight CPU ready";
   
   while((j<sizeOf))
   {
@@ -67,9 +70,10 @@ void setup() {
      lisDetected[j+offset]=lStr[j];
      airDetected[j+offset]=aStr[j];
      startupCompleted[j+offset]=sStr[j];
-     continuityPass[j+offset]=cPStr[j];
-     continuityFail[j+offset]=cFStr[j];
-  
+    //  continuityPass[j+offset]=cPStr[j];
+    //  continuityFail[j+offset]=cFStr[j];
+    flightCPU[j+offset]=fStr[j];
+     
      j++;
   }
 
@@ -155,22 +159,37 @@ void setup() {
   // }
 
 
-// // Attempting to send confirmation to remote server to show startup has completed, but it's not loading the rest of the code when I do that... hmmmm
+// Attempting to send confirmation to remote server to show startup has completed, but it's not loading the rest of the code when I do that... hmmmm
   Udp.beginPacket(remoteIp, 2931);
   Udp.write(startupCompleted);
   Udp.endPacket();
   delay(2000);
 
+  Udp.beginPacket(groundIp, 8888);
+  Udp.write(flightCPU);
+  Udp.endPacket();
+  delay(2000);
 
-//  lcd.begin(16, 2);
-//  lcd.print("BME280 Sensor");
-//  lcd.setCursor(0, 1);
-//  lcd.print("Scan");
-//  delay(delayTime);
 }
 
 void loop() {
-  // Multiple calls to serialValues() between calls to printValues() to create manual delay on lcd without delaying serial output. Bad implementation but works for now
+
+  int packetSize = Udp.parsePacket();
+  if (packetSize) {
+    IPAddress remote = Udp.remoteIP();
+
+    int len = Udp.read(packetBuffer, 255);
+    if (len > 0) {
+      packetBuffer[len] = 0;
+    }
+    Serial.println("Received: ");
+    Udp.beginPacket(remoteIp, 2931);
+    Udp.write(packetBuffer);
+    Udp.endPacket();
+
+    // Ignite motor by setting analog pin to HIGH to initiate launch sequence
+  }
+
   lis.read();
   sensors_event_t event;
   lis.getEvent(&event);
@@ -215,78 +234,6 @@ void loop() {
   Serial.println(reply);
   delay(100);
 }
-
-//void serialValues() {
-//  lis.read();
-//  Serial.print("{");
-//  Serial.print("\"Temperature\":");
-//  Serial.print(bme.readTemperature());
-//  Serial.print(",");
-//
-//  Serial.print("\"Pressure\":");
-//
-//  Serial.print(bme.readPressure() / 100.0F);
-//  Serial.print(",");
-//
-//  Serial.print("\"Altitude\":");
-//  Serial.print(bme.readAltitude(SEALEVELPRESSURE_HPA));
-//  Serial.print(",");
-//
-//  Serial.print("\"Humidity\":");
-//  Serial.print(bme.readHumidity());
-//  Serial.print(",");
-//
-//  Serial.print("\"X\":");
-//  Serial.print(lis.x);
-//  Serial.print(",");
-//
-//  Serial.print("\"Y\":");
-//  Serial.print(lis.y);
-//  Serial.print(",");
-//
-//  Serial.print("\"Z\":");
-//  Serial.print(lis.z);
-//  Serial.println(F("}");
-//
-//}
-
-
-
-//void printValues(int i) {
-//  serialValues();
-//  if (i == 1) {
-//    lcd.clear();
-//    lcd.print("Temp: ");
-//    lcd.print(bme.readTemperature());
-//    lcd.print("*C");
-//    lcd.setCursor(0, 1);
-//    lcd.print("Humd: ");
-//    lcd.print(bme.readHumidity());
-//    lcd.print("%");
-//  } else if (i == 2) {
-//    lcd.clear();
-//    lcd.print("Press: ");
-//    lcd.print(bme.readPressure() / 100.0F);
-//    lcd.print("hPa");
-//    lcd.setCursor(0, 1);
-//    lcd.print("Alt: ");
-//    lcd.print(bme.readAltitude(SEALEVELPRESSURE_HPA));
-//    lcd.print("m");
-//  } else if ( i == 3) {
-//    lcd.clear();
-//    lcd.print("T:");
-//    lcd.print(bme.readTemperature(), 0);
-//    lcd.print("*C/H:");
-//    lcd.print(bme.readHumidity(), 0);
-//    lcd.print("%");
-//    lcd.setCursor(0, 1);
-//    lcd.print("P:");
-//    lcd.print((bme.readPressure() / 100.0F), 0);
-//    lcd.print("/A:");
-//    lcd.print(bme.readAltitude(SEALEVELPRESSURE_HPA), 0);
-//    lcd.print("m");
-//  }
-//}
 
 void printWifiStatus() {
   // print the SSID of the network you're attached to:
