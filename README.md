@@ -4,7 +4,6 @@ Arduino-based IMU telemetry system for model rockets.
 
 Phase 1: Build a weather station with custom PCB to learn basics of PCB design and sensor data
 
-<<<<<<< HEAD
 This is a prototype for a future project which will incorporate this weather station alongside an accelerometer to work as the telemetry for a model rocket. 
 
 # PCB Schematics
@@ -19,7 +18,7 @@ The MK II PCB was carefully redesigned to improve upon the Mk I's failures by ut
 
 ![](images/Mk_II_F.png)
 ![](images/Mk_II_B.png)
-=======
+
 Phase 2: Using knowledge from Phase 1, design custom rocket avionics board using off-the-shelf components and test in rocket.
 
 Phase 3: Build ground-control system to communicate with avionics on board
@@ -42,4 +41,3 @@ The MK II PCB was carefully redesigned to improve upon the Mk I's failures by ut
 
 <img src="Images/Mk_II_F.png" width="60%" />
 <img src="Images/Mk_II_B.png" width="60%" />
->>>>>>> ae4a903d353e9cb305e6343db24956acba074fc3
