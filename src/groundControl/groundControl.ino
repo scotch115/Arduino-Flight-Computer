@@ -4,6 +4,7 @@
 //#include <SoftwareSerial.h>
 #include <WiFiNINA.h>
 #include <WiFiUdp.h>
+#include "keys.h"
 
 
 #define SPIWIFI       SPI  // The SPI port
@@ -23,6 +24,9 @@ WiFiUDP Udp;
 
 char packetBuffer[255];
 char ReplyBuffer[255];
+
+char networkName[] = NETWORK;
+char password[] = PASSWORD;
 
 
 void setup() {
@@ -57,7 +61,7 @@ void setup() {
   
   Serial.println(F("Attempting to connect to WiFi "));
   do {
-    wStatus = WiFi.begin("ilovelucy", "JordanTorri108");
+    wStatus = WiFi.begin(networkName, password);
     delay(100);
   } while (wStatus != WL_CONNECTED);
   printWifiStatus();
@@ -66,11 +70,7 @@ void setup() {
 
   Udp.beginPacket(remoteIp, 2931);
   Udp.write(groundControlDetected);
-  Udp.endPacket();
-
-  pinMode(A0, OUTPUT);
-  
-  
+  Udp.endPacket();  
 
 }
 

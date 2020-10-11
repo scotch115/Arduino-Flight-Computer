@@ -1,6 +1,6 @@
 {
     "board": "adafruit:avr:metro",
     "programmer": "AVR ISP",
-    "sketch": "groundControl/groundControl.ino",
+    "sketch": "src/barometer/barometer.ino",
     "port": "/dev/cu.usbserial-01D95FCC"
 }

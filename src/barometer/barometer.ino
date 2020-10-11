@@ -7,6 +7,7 @@
 //#include <SoftwareSerial.h>
 #include <WiFiNINA.h>
 #include <WiFiUdp.h>
+#include "keys.h"
 
 #define LIS3DH_CLK 10
 #define LIS3DH_MISO 9
@@ -41,6 +42,9 @@ IPAddress remoteIp(192, 168, 1, 65);
 IPAddress groundIp(192, 168, 1, 153);
 unsigned int localPort = 2390;      // local port to listen on
 WiFiUDP Udp;
+
+char networkName[] = NETWORK;
+char password[] = PASSWORD;
 
 char packetBuffer[255];
 char wait[100] = "Flight Computer waiting to establish connection to Ground Control";
@@ -92,7 +96,7 @@ void setup() {
   
   Serial.println(F("Attempting to connect to WiFi "));
   do {
-    wStatus = WiFi.begin("ilovelucy", "JordanTorri108");
+    wStatus = WiFi.begin(networkName, password);
     delay(100);
   } while (wStatus != WL_CONNECTED);
   printWifiStatus();
