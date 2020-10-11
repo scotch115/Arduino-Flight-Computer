@@ -5,8 +5,9 @@ Arduino-based IMU telemetry system for model rockets.
 Phase 1: Build a weather station with custom PCB to learn basics of PCB design and sensor data
 
 Phase 2: Using knowledge from Phase 1, design custom rocket avionics board using off-the-shelf components and test in rocket.
+    -> Assemble flight computer once design is selected
 
-Phase 3: Build ground-control system to communicate with avionics on board
+Phase 3: Build ground-control system to communicate with flight computer
 
 Phase 4: Build rocket
 
@@ -25,3 +26,21 @@ The MK II PCB was carefully redesigned to improve upon the Mk I's failures by ut
 
 <img src="Images/Mk_II_F.png" width="60%" />
 <img src="Images/Mk_II_B.png" width="60%" />
+
+
+# Phase II 
+## Flight Computer
+This is the assembled flight computer with all sensors, now compatible with Li-Poly support! Ground Control system is functional and connects to the flight computer and the node-red server
+
+
+<img src="Images/flightCPU.PNG" width="60%" />
+<img src="Images/groundCtrl.PNG" width="60%" />
+
+The AirLift Wi-Fi Co-Processor on both the Adalogger and Metro are able to successfully communicate with the Node-Red server, to send sensor data over UDP for collection and assimilation. The Node-Red dashboard is configured to not only build graphs in real-time, but also saves the data as it is received to a JSON file. 
+
+<img src="Images/nodeRedDash.PNG" width="60%" />
+<img src="Images/nodeRedGraph.PNG" width="60%" />
+
+# Phase III
+## Rocket Design and Construction
+> Currently doing research and teaching myself rocket mechanics to design and build a stable, efficient rocket. Updates coming soon.
