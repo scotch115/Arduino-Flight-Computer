@@ -1,0 +1,6 @@
+{
+    "board": "adafruit:avr:metro",
+    "programmer": "AVR ISP",
+    "sketch": "groundControl/groundControl.ino",
+    "port": "/dev/cu.usbserial-01D95FCC"
+}
