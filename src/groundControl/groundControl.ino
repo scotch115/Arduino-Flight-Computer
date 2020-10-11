@@ -71,6 +71,7 @@ void setup() {
   Udp.beginPacket(remoteIp, 2931);
   Udp.write(groundControlDetected);
   Udp.endPacket();  
+  pinMode(A0, OUTPUT);
 
 }
 

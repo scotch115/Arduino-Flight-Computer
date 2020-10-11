@@ -180,6 +180,7 @@ void setup() {
   Udp.beginPacket(groundIp, 8888);
   Udp.write(flightCPU);
   Udp.endPacket();
+  Serial.println("Sent flightData to ground control");
   delay(2000);
 
 }
