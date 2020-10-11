@@ -43,6 +43,8 @@ unsigned int localPort = 2390;      // local port to listen on
 WiFiUDP Udp;
 
 char packetBuffer[255];
+char wait[100] = "Flight Computer waiting to establish connection to Ground Control";
+char flightData[100];
 
 void setup() {
   Serial.begin(9600);
@@ -52,7 +54,8 @@ void setup() {
   unsigned status;
   unsigned lStatus;
   unsigned wStatus;
-  char bmeDetected[100], lisDetected[100], airDetected[100], startupCompleted[100], flightCPU[100];
+  unsigned cpuReady;
+  char bmeDetected[100], lisDetected[100], airDetected[100], startupCompleted[100], continuityPass[80], continuityFail[80], flightCPU[100];
   int j = 0;
   int sizeOf = 100;
   int offset = 0;
@@ -60,9 +63,10 @@ void setup() {
   String lStr = "LIS3DH Detected.";
   String aStr = "AirLift Featherwing Detected.";
   String sStr = "Startup process completed, beginning sensor scans.";
-  // String cPStr = "Flight Computer has continuity on tested pin";
-  // String cFStr = "Flight Computer does not have continuity on tested pin";
+  String cPStr = "Flight Computer has continuity on tested A0";
+  String cFStr = "Flight Computer does not have continuity on A0";
   String fStr = "Flight CPU ready";
+  String dataStr = "Flight CPU sent data to server";
   
   while((j<sizeOf))
   {
@@ -70,9 +74,10 @@ void setup() {
      lisDetected[j+offset]=lStr[j];
      airDetected[j+offset]=aStr[j];
      startupCompleted[j+offset]=sStr[j];
-    //  continuityPass[j+offset]=cPStr[j];
-    //  continuityFail[j+offset]=cFStr[j];
+     continuityPass[j+offset]=cPStr[j];
+     continuityFail[j+offset]=cFStr[j];
     flightCPU[j+offset]=fStr[j];
+    flightData[j+offset]=dataStr[j];
      
      j++;
   }
@@ -84,7 +89,6 @@ void setup() {
   }
 
   Serial.println(F("AirLift Featherwing detected."));
-  Serial.println(F("== Startup process completed. =="));
   
   Serial.println(F("Attempting to connect to WiFi "));
   do {
@@ -106,6 +110,7 @@ void setup() {
 //  // You can also pass in a Wire library object like &Wire2
 //  // status = bme.begin(0x76, &Wire2)
   if (!status) {
+    cpuReady == false;
     Serial.println(F("Could not find a valid BME280 sensor, check wiring, address, sensor ID!"));
     Serial.print("SensorID was: 0x"); Serial.println(bme.sensorID(), 16);
     Serial.print("        ID aof 0xFF probably means a bad address, a BMP 180 or BMP 085\n");
@@ -129,6 +134,7 @@ void setup() {
 
   if (!lStatus) {   // change this to 0x19 for alternative i2c address
     Serial.println(F("Couldnt start"));
+    cpuReady == false;
     while (1) yield();
   } else { Serial.println(F("LIS3DH Detected.")); }
 
@@ -143,23 +149,25 @@ void setup() {
   Udp.endPacket();
   delay(2000);
 
-  // pinMode(19, OUTPUT);
-  // digitalWrite(19, LOW);
-  // pinMode(19, INPUT_PULLUP);
+  pinMode(A0, OUTPUT);
+//  digitalWrite(A0, HIGH);
+  pinMode(A0, INPUT_PULLUP);
   
-  // int continuityVal = digitalRead(19);
-  // if (continuityVal == HIGH) {
-  //   Udp.beginPacket(remoteIp, 2931);
-  //   Udp.write(continuityPass);
-  //   Udp.endPacket();
-  // } else {
-  //   Udp.beginPacket(remoteIp, 2931);
-  //   Udp.write(continuityFail);
-  //   Udp.endPacket();
-  // }
+  int continuityVal = digitalRead(A0);
+  if (continuityVal == HIGH) {
+    Udp.beginPacket(remoteIp, 2931);
+    Udp.write(continuityPass);
+    Udp.endPacket();
+  } else {
+    Udp.beginPacket(remoteIp, 2931);
+    Udp.write(continuityFail);
+    Udp.endPacket();
+  }
 
-
-// Attempting to send confirmation to remote server to show startup has completed, but it's not loading the rest of the code when I do that... hmmmm
+  Serial.println(F("== Startup process completed. =="));
+  cpuReady == true;
+  
+  // Attempting to send confirmation to remote server to show startup has completed, but it's not loading the rest of the code when I do that... hmmmm
   Udp.beginPacket(remoteIp, 2931);
   Udp.write(startupCompleted);
   Udp.endPacket();
@@ -173,23 +181,6 @@ void setup() {
 }
 
 void loop() {
-
-  int packetSize = Udp.parsePacket();
-  if (packetSize) {
-    IPAddress remote = Udp.remoteIP();
-
-    int len = Udp.read(packetBuffer, 255);
-    if (len > 0) {
-      packetBuffer[len] = 0;
-    }
-    Serial.println("Received: ");
-    Udp.beginPacket(remoteIp, 2931);
-    Udp.write(packetBuffer);
-    Udp.endPacket();
-
-    // Ignite motor by setting analog pin to HIGH to initiate launch sequence
-  }
-
   lis.read();
   sensors_event_t event;
   lis.getEvent(&event);
@@ -232,6 +223,11 @@ void loop() {
   Udp.write(reply);
   Udp.endPacket();
   Serial.println(reply);
+  delay(100);
+  
+  Udp.beginPacket(groundIp, 8888);
+  Udp.write(flightData);
+  Udp.endPacket();
   delay(100);
 }
 

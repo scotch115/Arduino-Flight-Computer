@@ -13,7 +13,7 @@
 #define ESP32_GPIO0    6
 
 
-unsigned long delayTime = 2000;
+unsigned long delayTime = 200;
 
 IPAddress remoteIp(192, 168, 1, 65);
 unsigned int localPort = 8888;      // local port to listen on
@@ -68,17 +68,18 @@ void setup() {
   Udp.write(groundControlDetected);
   Udp.endPacket();
 
+  pinMode(A0, OUTPUT);
+  
   
 
 }
 
 void loop() {
-  unsigned status;
-  
     
   // Check for packet data from flight cpu
   int packetSize = Udp.parsePacket();
   if (packetSize) {
+      digitalWrite(A0, HIGH);
       IPAddress remote = Udp.remoteIP();
       int len = Udp.read(packetBuffer, 255);
       if (len > 0) {
@@ -87,12 +88,16 @@ void loop() {
       Serial.print("Received: ");
       Serial.println(packetBuffer);
 
+      // If data is received from 
+      pinMode(A0, OUTPUT);
+      pinMode(A0, INPUT_PULLUP);
+
       Udp.beginPacket(Udp.remoteIP(), Udp.remotePort());
-      Udp.write(ReplyBuffer);
+      Udp.write(packetBuffer);
       Udp.endPacket();
   }
 
-  delay(delayTime);
+  delay(2000);
   
 }
 
