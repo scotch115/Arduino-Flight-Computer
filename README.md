@@ -38,8 +38,8 @@ This is the assembled flight computer with all sensors, now compatible with Li-P
 
 The AirLift Wi-Fi Co-Processor on both the Adalogger and Metro are able to successfully communicate with the Node-Red server, to send sensor data over UDP for collection and assimilation. The Node-Red dashboard is configured to not only build graphs in real-time, but also saves the data as it is received to a JSON file. 
 
-<img src="Images/nodeRedDash.PNG" width="60%" />
-<img src="Images/nodeRedGraph.PNG" width="60%" />
+<img src="Images/nodeRedDash.png" width="60%" />
+<img src="Images/nodeRedGraph.png" width="60%" />
 
 # Phase III
 ## Rocket Design and Construction
