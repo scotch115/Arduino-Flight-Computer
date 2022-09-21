@@ -39,6 +39,8 @@ unsigned int numTones = 6;
 unsigned int tones[] = {523, 587, 659, 739, 830, 880};
 /************* upper    C    D    E    F#   G#   A   */
 
+#define LEDPIN A3
+
 
 /************************
  *** Servo Definitions ***
@@ -116,6 +118,17 @@ void setup() {
   
   Serial.begin(115200);
 
+  while (!Serial) {
+    // Wait for serial to be available (only necessary for current stage of software development)
+  }
+
+  Serial.println();Serial.println();
+  Serial.println("Beginning Pre-Flight Software check.");
+  Serial.println();Serial.println();
+  delay(2000);
+
+  pinMode(LEDPIN, OUTPUT);
+
   // Play bootup sequence sound
   for (unsigned int i = 0; i < numTones; i++) {
     tone(A1, tones[i]);
@@ -151,6 +164,8 @@ void setup() {
   // Serial.print("Set Freq to: "); Serial.println(RF95_FREQ);
 
   // rf95.setTxPower(23, false);
+
+  Serial.println("First let's see if the BME280 Barometer is connected. Standby...");
  
 
   // default settings
@@ -162,7 +177,7 @@ void setup() {
     while (1) delay(10);
   } else {
     if (status) {
-      String bmeMsg = "BME280 Initialized";
+      String bmeMsg = "Found the BME280 sensor! Here's some data...";
       char bMessage[200];
       int b = 0;
       while((b<200)) {
@@ -175,6 +190,17 @@ void setup() {
        * !! REMOVE WHEN USING RF !!    *
        *********************************/
       Serial.println(bMessage);
+      delay(2000);
+      tone(A1, 523);
+      digitalWrite(LEDPIN, HIGH);
+      delay(50);
+      noTone(A1);
+      digitalWrite(LEDPIN, LOW);
+      Serial.print("Temperature = ");Serial.print(bme.readTemperature());Serial.println(" *C");
+      Serial.print("Pressure = ");Serial.print((bme.readPressure() / 100.0F));Serial.println(" Pa");
+      Serial.print("Approx Altitude = ");Serial.print(bme.readAltitude(SEALEVELPRESSURE_HPA));Serial.println(" m");
+      Serial.print("Humidity = ");Serial.print(bme.readHumidity());Serial.println(" %");
+      Serial.println();Serial.println();
 
       /**********************************
        * ? Send status update over LoRa ?
@@ -183,17 +209,16 @@ void setup() {
       // rf95.send((uint8_t *)bMessage, 200);
       // delay(10);
       // rf95.waitPacketSent();
-
-      tone(A1, 523);
-      delay(50);
-      noTone(A1);
-      delay(1000);
     }
   }
+
+  Serial.println("Now we'll look for the MPU6050 IMU. Standby...");
+  
+  delay(2000);
   
   mpu.initialize();
   pinMode(INTERRUPT_PIN, INPUT_PULLUP);
-  String mpuMsg = "MPU6050 Initialized";
+  String mpuMsg = "Found it! MPU6050 Connection Successful.";
   char mMessage[200];
   int m = 0;
   while((m<200)) {
@@ -214,11 +239,6 @@ void setup() {
   // rf95.send((uint8_t *)mMessage, 200);
   // delay(10);
   // rf95.waitPacketSent();
-  
-  tone(A1, 523);
-  delay(50);
-  noTone(A1);
-  delay(1000);
 
   devStatus = mpu.dmpInitialize();
 
@@ -236,7 +256,7 @@ void setup() {
 
   if (devStatus == 0) {
     // turn on the DMP, now that it's ready
-    Serial.println(F("Enabling DMP..."));
+    Serial.println(F("Enabling Digital Motion Processor (DMP). Standby..."));
     mpu.setDMPEnabled(true);
 
     // enable Arduino interrupt detection
@@ -247,7 +267,7 @@ void setup() {
     mpuIntStatus = mpu.getIntStatus();
 
     // set our DMP Ready flag so the main loop() function knows it's okay to use it
-    Serial.println(F("DMP ready! Waiting for first interrupt..."));
+    Serial.println(F("DMP Calibration complete!"));
     dmpReady = true;
 
     // get expected DMP packet size for later comparison
@@ -262,13 +282,61 @@ void setup() {
     Serial.println(F(")"));
   }
 
+  delay(2000);
+  tone(A1, 523);
+  digitalWrite(LEDPIN, HIGH);
+  delay(50);
+  noTone(A1);
+  digitalWrite(LEDPIN, LOW);
+  Serial.println();Serial.println();
+  Serial.println("Here's a little bit of data!");
+  for (int i = 0; i < 15; i++) {
+    if (mpu.dmpGetCurrentFIFOPacket(fifoBuffer)) {
+      mpu.dmpGetQuaternion(&q, fifoBuffer);
+      mpu.dmpGetGravity(&gravity, &q);
+      mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
+      mpu.dmpGetQuaternion(&q, fifoBuffer);
+      mpu.dmpGetAccel(&aa, fifoBuffer);
+      mpu.dmpGetGravity(&gravity, &q);
+      mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
+    }
+    delay(100);
+    Serial.print("a/g:\t");
+    Serial.print(aaReal.x); Serial.print("\t");
+    Serial.print(aaReal.y); Serial.print("\t");
+    Serial.print(aaReal.z); Serial.print("\t");
+    Serial.print(ypr[0]); Serial.print("\t");
+    Serial.print(ypr[1]); Serial.print("\t");
+    Serial.println(ypr[2]);
+  }
+  Serial.println();Serial.println();
+
+  delay(2000);
+  Serial.println("Now let's test the fin control! Connecting to servos, standby...");
+  Serial.println();Serial.println();
+
   servo0.attach(servo0Pin);
   servo1.attach(servo1Pin);
+  
+  // Test servo functionality
+  servo0.write(180);
+  servo1.write(-180);
+  delay(1000);
+  servo0.write(-180);
+  servo1.write(180);
+  delay(1000);
+  servo0.write(90);
+  servo1.write(90);
+  delay(1000);
 
+
+  digitalWrite(LEDPIN, HIGH);
   analogWrite(A0, 150);
-  delay(200);
+  delay(50);
+  digitalWrite(LEDPIN, LOW);
+  noTone(A1);
 
-  String readyMsg = "Flight Computer Primed and Ready";
+  String readyMsg = "Flight Computer is Primed and Ready!";
   char rMessage[200];
   int r = 0;
   while((r<200)) {
@@ -281,6 +349,7 @@ void setup() {
    * !! REMOVE WHEN USING RF !!    *
    *********************************/
   Serial.println(rMessage);
+  Serial.println();Serial.println();
 
   /**********************************
    * ? Send status update over LoRa ?
@@ -291,6 +360,7 @@ void setup() {
   // rf95.waitPacketSent();
 
   tone(A1, 1760);
+  digitalWrite(LEDPIN, HIGH);
   delay(500);
   noTone(A1);
   
@@ -323,9 +393,20 @@ void loop() {
    * 
    * @param - STARTUP
    * @param - ARM
+   * @param - START CAMERA
+   * @param - STOP CAMERA
    * @param - IGNITION / LAUNCH
    * @param - DEPLOY / CHUTE
    * @param - REBOOT
+   */
+
+  /**
+   * Rocket camera feed will be handled by raspberry pi zero,
+   * using a configuration similar to what is outlined here:
+   * https://automaticaddison.com/2-way-communication-between-raspberry-pi-and-arduino/
+   * 
+   * The only expected obstacle at this time is going to be streaming the video to the ground computer,
+   * because I don't think sending video signals over radio is going to be a good idea (or work at all).
    */
 
   
@@ -419,7 +500,7 @@ void loop() {
   Payload += ",""\"Z\":";
   Payload += aaReal.x;
 
-  //  ! (WIP - Servo Angle of Attack tracking)
+  //  ! (WIP - Battery Status)
   // Payload += ",""\"Battery Voltage\":";
   // Payload += measuredvbat;
 
