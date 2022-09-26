@@ -4,7 +4,7 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
 #include "I2Cdev.h"
-#include "MPU6050_6Axis_MotionApps20.h"
+#include "MPU6050_6Axis_MotionApps612.h"
 #include <RH_RF95.h>
 #include <avr/dtostrf.h>
 
@@ -87,6 +87,13 @@ VectorInt16 aaWorld;    // [x, y, z]            world-frame accel sensor measure
 VectorFloat gravity;    // [x, y, z]            gravity vector
 float euler[3];         // [psi, theta, phi]     Euler angle container
 float ypr[3];           // [yaw, pitch, roll]    yaw/pitch/roll container and gravity vector
+
+
+// Define base position values as zero, to convey the "starting" position
+float xPos = 0;
+float yPos = 0;
+float zPos = 0;
+
 
 /******************************
  * IMU interruption detection *
@@ -217,7 +224,7 @@ void setup() {
   delay(2000);
   
   mpu.initialize();
-  pinMode(INTERRUPT_PIN, INPUT_PULLUP);
+  pinMode(INTERRUPT_PIN, INPUT);
   String mpuMsg = "Found it! MPU6050 Connection Successful.";
   char mMessage[200];
   int m = 0;
@@ -247,21 +254,26 @@ void setup() {
   /*******************************
    * ! May require recalibration *
    *******************************/
-    mpu.setXAccelOffset(-578);
-    mpu.setYAccelOffset(-3277);
-    mpu.setZAccelOffset(1804);
-    mpu.setXGyroOffset(62);
-    mpu.setYGyroOffset(105);
+    mpu.setXAccelOffset(-613);
+    mpu.setYAccelOffset(-3312);
+    mpu.setZAccelOffset(1793);
+    mpu.setXGyroOffset(54);
+    mpu.setYGyroOffset(86);
     mpu.setZGyroOffset(39);
 
   if (devStatus == 0) {
+  // Calibration Time: generate offsets and calibrate our MPU6050
+    mpu.CalibrateAccel(6);
+    mpu.CalibrateGyro(6);
+    Serial.println();
+    mpu.PrintActiveOffsets();
     // turn on the DMP, now that it's ready
     Serial.println(F("Enabling Digital Motion Processor (DMP). Standby..."));
     mpu.setDMPEnabled(true);
 
     // enable Arduino interrupt detection
     Serial.print(F("Enabling interrupt detection (Arduino external interrupt "));
-  //  Serial.print(digitalPinToInterrupt(INTERRUPT_PIN));
+    Serial.print(digitalPinToInterrupt(INTERRUPT_PIN));
     Serial.println(F(")..."));
     attachInterrupt(digitalPinToInterrupt(INTERRUPT_PIN), dmpDataReady, RISING);
     mpuIntStatus = mpu.getIntStatus();
@@ -295,9 +307,7 @@ void setup() {
       mpu.dmpGetQuaternion(&q, fifoBuffer);
       mpu.dmpGetGravity(&gravity, &q);
       mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
-      mpu.dmpGetQuaternion(&q, fifoBuffer);
       mpu.dmpGetAccel(&aa, fifoBuffer);
-      mpu.dmpGetGravity(&gravity, &q);
       mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
     }
     delay(100);
@@ -348,6 +358,7 @@ void setup() {
    * ! FOR OFFLINE TESTING ONLY !  *
    * !! REMOVE WHEN USING RF !!    *
    *********************************/
+  Serial.println();Serial.println();
   Serial.println(rMessage);
   Serial.println();Serial.println();
 
@@ -382,14 +393,11 @@ void loop() {
     mpu.dmpGetQuaternion(&q, fifoBuffer);
     mpu.dmpGetGravity(&gravity, &q);
     mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
-    mpu.dmpGetQuaternion(&q, fifoBuffer);
     mpu.dmpGetAccel(&aa, fifoBuffer);
-    mpu.dmpGetGravity(&gravity, &q);
     mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
-  }
 
   /**
-   * @note - The flight CPU should have the following "commands", receivable via 900mHz radio
+   * @note - The flight CPU should have the following "commands", receivable via 900mHz radio from the launch pad controller
    * 
    * @param - STARTUP
    * @param - ARM
@@ -401,6 +409,7 @@ void loop() {
    */
 
   /**
+   * ! (WIP)
    * Rocket camera feed will be handled by raspberry pi zero,
    * using a configuration similar to what is outlined here:
    * https://automaticaddison.com/2-way-communication-between-raspberry-pi-and-arduino/
@@ -449,7 +458,7 @@ void loop() {
 //        touchdown();
 //   }
 
-  // Convert Yaw/Pitch/Roll to servo values   
+  // Convert Yaw/Pitch/Roll to readable values   
   ypr[0] = ypr[0] * 180/M_PI;
   ypr[1] = ypr[1] * 180/M_PI;
   ypr[2] = ypr[2] * 180/M_PI;
@@ -479,7 +488,8 @@ void loop() {
   /**********************************
    * Convert collected data to JSON *
    **********************************/
-  String Payload = "{""\"Temperature\":";
+  String Payload = "\"{";
+  Payload += "\"Temperature\":";
   Payload += bme.readTemperature();
   Payload += ",""\"Pressure\":";
   Payload += (bme.readPressure() / 100.0F);
@@ -494,11 +504,11 @@ void loop() {
   Payload += ",""\"Roll\":";
   Payload += ypr[2];
   Payload += ",""\"X\":";
-  Payload += aaReal.x;
+  Payload += calculateXDisplacement(aaReal.x);
   Payload += ",""\"Y\":";
-  Payload += aaReal.y;
+  Payload += calculateYDisplacement(aaReal.y);
   Payload += ",""\"Z\":";
-  Payload += aaReal.x;
+  Payload += calculateZDisplacement(aaReal.z);
 
   //  ! (WIP - Battery Status)
   // Payload += ",""\"Battery Voltage\":";
@@ -509,7 +519,7 @@ void loop() {
   // Payload += servo0Value;
   // Payload += ",""\"Servo1 AoA\":";
   // Payload += servo1Value;
-  Payload += "}";
+//  Payload += "}";
   
   char packet[200];
   int i = 0;
@@ -528,7 +538,6 @@ void loop() {
    *********************************/
   Serial.println(packet);
 
-
   /*********************************
    *  ? LoRa Payload transmission ?
    * ! REMOVE WHEN TESTING OFFLINE !
@@ -536,6 +545,7 @@ void loop() {
   // rf95.send((uint8_t *)packet, 200);
   // delay(10);
   // rf95.waitPacketSent();
+  }
 }
 
 
@@ -568,3 +578,25 @@ void loop() {
 //    lastAlt = altitude;
 //   }
 //}
+
+/**
+ * TODO: Implement a Kalman Filter / function to better process diff between
+ * TODO: first and second sensor readings to smooth out roll rate analysis
+ */
+
+
+// XYZ Position Calculations (WIP - currently just applying a complimentary filter to accel data)
+float calculateXDisplacement(float accelX) {
+  xPos = 0.96 * xPos + 0.04 * accelX;
+  return xPos;
+}
+
+float calculateYDisplacement(float accelY) {
+  yPos = 0.96 * yPos + 0.04 * accelY;
+  return yPos;
+}
+
+float calculateZDisplacement(float accelZ) {
+  zPos = 0.96 * zPos + 0.04 * accelZ;
+  return zPos;
+}
