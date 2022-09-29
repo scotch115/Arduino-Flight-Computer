@@ -7,30 +7,41 @@
 #include "MPU6050_6Axis_MotionApps612.h"
 #include <RH_RF95.h>
 #include <avr/dtostrf.h>
+#include <SimpleKalmanFilter.h>
 
 
 /*************************************************************************************************
  ******************************************** Globals ********************************************
  *************************************************************************************************/
 
-// LoRa
+// LoRa Pinouts
 #define RFM95_CS 8
 #define RFM95_RST 4
 #define RFM95_INT 3
 
+// Radio communication frequency
 #define RF95_FREQ 915.0
 
+// LoRa Radio Module instance
 RH_RF95 rf95(RFM95_CS, RFM95_INT);
 
+// Barometric Altimeter instance
+Adafruit_BME280 bme; // I2C
+
+// Inertial Measurement Unit (IMU) instance
 MPU6050 mpu;
+
 #define OUTPUT_READABLE_YAWPITCHROLL
 #define INTERRUPT_PIN 6
 
+// Current Atmospheric Pressure (UPDATE BEFORE FLIGHT)
 #define SEALEVELPRESSURE_HPA (1022.6)
 
+// Battery Voltage pinout (for collecting battery status)
 #define VBATPIN A7
 
-Adafruit_BME280 bme; // I2C
+// LED Pinout
+#define LEDPIN A3
 
 int altitude, lastAlt, apogee;
 
@@ -38,9 +49,6 @@ int altitude, lastAlt, apogee;
 unsigned int numTones = 6;
 unsigned int tones[] = {523, 587, 659, 739, 830, 880};
 /************* upper    C    D    E    F#   G#   A   */
-
-#define LEDPIN A3
-
 
 /************************
  *** Servo Definitions ***
@@ -86,7 +94,7 @@ VectorInt16 aaReal;     // [x, y, z]            gravity-free accel sensor measur
 VectorInt16 aaWorld;    // [x, y, z]            world-frame accel sensor measurements
 VectorFloat gravity;    // [x, y, z]            gravity vector
 float euler[3];         // [psi, theta, phi]     Euler angle container
-float ypr[3];           // [yaw, pitch, roll]    yaw/pitch/roll container and gravity vector
+float yrp[3];           // [yaw, roll, pitch]    yaw/roll/pitch container and gravity vector
 
 
 // Define base position values as zero, to convey the "starting" position
@@ -102,6 +110,27 @@ volatile bool mpuInterrupt = false;     // indicates whether MPU interrupt pin h
 void dmpDataReady() {
   mpuInterrupt = true;
 }
+
+
+/********************** KALMAN FILTERS**********************/
+/***************** SimpleKalmanFilter(e_mea, e_est, q); ****/
+/***************** e_mea: Measurement Uncertainty **********/
+/***************** e_est: Estimation Uncertainty ***********/
+/****************** q: Process Noise  **********************/
+  SimpleKalmanFilter xKalmanFilter(1, 1, 0.01);
+  SimpleKalmanFilter yKalmanFilter(1, 1, 0.01);
+  SimpleKalmanFilter zKalmanFilter(1, 1, 0.01);
+  SimpleKalmanFilter yawKalmanFilter(1, 1, 0.01);
+  SimpleKalmanFilter pitchKalmanFilter(1, 1, 0.01);
+  SimpleKalmanFilter rollKalmanFilter(1, 1, 0.01);
+
+
+
+  /*************************/
+  /* Launch State Handling */
+  /*************************/
+  String launchState = "OFF";
+
 
 /*********************************************************************************
  ************************************ Startup ************************************
@@ -129,10 +158,250 @@ void setup() {
     // Wait for serial to be available (only necessary for current stage of software development)
   }
 
+  preCheck();
+}
+
+/*************************************************************************
+ ******************************* Main loop *******************************
+ *************************************************************************/
+
+void loop() {
+/**
+ * @note - The flight CPU should have the following "commands", receivable via 900mHz radio from the launch pad controller
+ * 
+ * @param - STARTUP
+ * @param - ARMED
+ * @param - START CAMERA
+ * @param - STOP CAMERA
+ * @param - IGNITION / LAUNCH
+ * @param - DEPLOY / CHUTE
+ * @param - REBOOT
+ */
+  if (launchState == "ARMED"
+    || launchState == "LIFTOFF"
+    || launchState == "IDLE"
+    || launchState == "FLIGHT") {
+      if (!dmpReady) return;
+      if (mpu.dmpGetCurrentFIFOPacket(fifoBuffer)) {
+        mpu.dmpGetQuaternion(&q, fifoBuffer);
+        mpu.dmpGetGravity(&gravity, &q);
+        mpu.dmpGetYawPitchRoll(yrp, &q, &gravity);
+        mpu.dmpGetAccel(&aa, fifoBuffer);
+        mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
+
+
+      /**
+       * ! (WIP)
+       * Rocket camera feed will be handled by raspberry pi zero,
+       * using a configuration similar to what is outlined here:
+       * https://automaticaddison.com/2-way-communication-between-raspberry-pi-and-arduino/
+       * 
+       * The only expected obstacle at this time is going to be streaming the video to the ground computer,
+       * because I don't think sending video signals over radio is going to be a good idea (or work at all).
+       */
+
+      
+      /******************************************
+       * ! (WIP)
+       *  Check rocket has not surpassed apogee * 
+       ******************************************/
+      //  altitude = bme.readAltitude(SEALEVELPRESSURE_HPA);
+      //  if (altitude - lastAlt <= -1) {
+      //    delay(100);
+      //    altitude = bme.readAltitude(SEALEVELPRESSURE_HPA);
+      //    if (altitude - lastAlt <= -2) {
+      //      delay(100);
+      //      altitude = bme.readAltitude(SEALEVELPRESSURE_HPA);
+      //      if (altitude - lastAlt <= -3) {
+      //        apogee = lastAlt - 3;
+      //        delay(150);
+      //        deploy();
+      //      } else {
+      //      lastAlt = altitude;
+      //      }
+      //    } else {
+      //      lastAlt = altitude;
+      //      } 
+      //   } else {
+      //    lastAlt = altitude;
+      //   }
+
+
+      //   if (chutesFired == true) {
+      //    // BEGIN DESCENT // 
+      //        analogWrite(A0,150);
+      //        delay(100);
+      //        analogWrite(A0, 0);
+      //        delay(100);
+      //        analogWrite(A0,150);
+      //        delay(100);
+      //        analogWrite(A0, 0);
+      //        delay(100);
+      //        touchdown();
+      //   }
+
+      // --TODO: Fix the yrp mapping due to orientation (MPU is not oriented the same as the CPU - x and y axes are swapped)--
+      // Convert Yaw/Roll/Pitch to readable values   
+      yrp[0] = yrp[0] * 180/M_PI;
+      yrp[1] = yrp[1] * 180/M_PI;
+      yrp[2] = yrp[2] * 180/M_PI;
+
+      // Complementary filter - combine acceleromter and gyro angle values
+      //  yrp[1] = 0.96 * yrp[1] + 0.04 * aaReal.y;
+      //  yrp[2] = 0.96 * yrp[2] + 0.04 * aaReal.x;
+      yrp[0] = yawKalmanFilter.updateEstimate(yrp[0]);
+      yrp[1] = pitchKalmanFilter.updateEstimate(yrp[1]);
+      yrp[2] = rollKalmanFilter.updateEstimate(yrp[2]);
+
+      if (launchState == "LIFTOFF" || launchState == "FLIGHT") {
+        // Map the values of the MPU6050 sensor from -90 to 90 to values suitable for the servo control from 0 to 180
+        int servo0Value = map(yrp[1], -90, 90, 0, 180);
+        int servo1Value = map(yrp[1], -90, 90, 0, 180);
+        
+        // Control the servos according to the MPU6050 orientation
+        servo0.write(servo0Value);
+        servo1.write(servo1Value);
+      }
+
+    /***************************************
+     *    ? Get current battery level ?
+     * ! REMOVE WHEN BATTERY IS UNPLUGGED  !
+     **************************************/
+    // // Get current battery level
+    // float measuredvbat = analogRead(VBATPIN);
+    // measuredvbat *= 2;
+    // measuredvbat *= 3.3;
+    // measuredvbat /= 1024;
+
+    /**********************************
+     * Convert collected data to JSON *
+     **********************************/
+    String Payload = "\"{";
+    Payload += "\"Temperature\":";
+    Payload += bme.readTemperature();
+    Payload += ",""\"Pressure\":";
+    Payload += (bme.readPressure() / 100.0F);
+    Payload += ",""\"Altitude\":";
+    Payload += bme.readAltitude(SEALEVELPRESSURE_HPA);
+    Payload += ",""\"Humidity\":";
+    Payload += bme.readHumidity();
+    Payload += ",""\"Yaw\":";
+    Payload += yrp[0];
+    Payload += ",""\"Pitch\":";
+    Payload += yrp[2];
+    Payload += ",""\"Roll\":";
+    Payload += yrp[1];
+    Payload += ",""\"X\":";
+    Payload += calculateXDisplacement(aaReal.x);
+    Payload += ",""\"Y\":";
+    Payload += calculateYDisplacement(aaReal.y);
+    Payload += ",""\"Z\":";
+    Payload += calculateZDisplacement(aaReal.z);
+
+    //  ! (WIP - Battery Status)
+    // Payload += ",""\"Battery Voltage\":";
+    // Payload += measuredvbat;
+
+    /* ! (WIP - Servo Angle of Attack tracking) */
+    // Payload += ",""\"Servo0 AoA\":";
+    // Payload += servo0Value;
+    // Payload += ",""\"Servo1 AoA\":";
+    // Payload += servo1Value;
+    //  Payload += "}";
+      
+    char packet[200];
+    int i = 0;
+    int sizeOf = 200;
+    int offset = 0;
+    
+    while((i<sizeOf))
+    {
+        packet[i]=Payload[i];  
+        i++;
+    }
+    
+    /*********************************
+     * ! FOR OFFLINE TESTING ONLY !  *
+     * !! REMOVE WHEN USING RF !!    *
+     *********************************/
+    Serial.println(packet);
+
+    /*********************************
+     *  ? LoRa Payload transmission ?
+     * ! REMOVE WHEN TESTING OFFLINE !
+      *******************************/
+    // rf95.send((uint8_t *)packet, 200);
+    // delay(10);
+    // rf95.waitPacketSent();
+    } 
+  } else if (launchState == "REBOOT") {
+    preCheck();
+  } else if (launchState == "STANDBY"
+    || launchState == "ERROR"
+    || launchState =="STARTUP") {
+    return;
+  }
+}
+
+
+//void deploy() {
+//  chutesFired = true;
+//  // Fire relay
+//  digitalWrite(A2, HIGH);
+//  delay(1000);
+//  digitalWrite(A2, LOW);
+//  delay(100);
+//}
+//
+//void touchdown() {
+//  if (altitude - lastAlt == 0) {
+//    delay(100);
+//    altitude = bme.readAltitude(SEALEVELPRESSURE_HPA);
+//    if (altitude - lastAlt == 0) {
+//      delay(100);
+//      altitude = bme.readAltitude(SEALEVELPRESSURE_HPA);
+//      if (altitude - lastAlt == 0) {
+//        landed = true;
+//        delay(150);
+//      } else {
+//        lastAlt = altitude;
+//      }
+//    } else {
+//      lastAlt = altitude;
+//    }
+//   } else {
+//    lastAlt = altitude;
+//   }
+//}
+
+// XYZ Position Calculations
+float calculateXDisplacement(float accelX) {
+  xPos = xKalmanFilter.updateEstimate(accelX);
+  return xPos;
+}
+
+float calculateYDisplacement(float accelY) {
+  yPos = yKalmanFilter.updateEstimate(accelY);
+  return yPos;
+}
+
+float calculateZDisplacement(float accelZ) {
+  zPos = zKalmanFilter.updateEstimate(accelZ);
+  return zPos;
+}
+
+/***********************************************************************************************/
+/********************************* Pre-Flight Startup Sequence *********************************/
+/***********************************************************************************************/
+void preCheck() {
   Serial.println();Serial.println();
   Serial.println("Beginning Pre-Flight Software check.");
   Serial.println();Serial.println();
   delay(2000);
+
+  launchState = "STARTUP";
+  Serial.println();
+  Serial.print("Flight Computer Status: ");Serial.println(launchState);
 
   pinMode(LEDPIN, OUTPUT);
 
@@ -306,7 +575,7 @@ void setup() {
     if (mpu.dmpGetCurrentFIFOPacket(fifoBuffer)) {
       mpu.dmpGetQuaternion(&q, fifoBuffer);
       mpu.dmpGetGravity(&gravity, &q);
-      mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
+      mpu.dmpGetYawPitchRoll(yrp, &q, &gravity);
       mpu.dmpGetAccel(&aa, fifoBuffer);
       mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
     }
@@ -315,9 +584,9 @@ void setup() {
     Serial.print(aaReal.x); Serial.print("\t");
     Serial.print(aaReal.y); Serial.print("\t");
     Serial.print(aaReal.z); Serial.print("\t");
-    Serial.print(ypr[0]); Serial.print("\t");
-    Serial.print(ypr[1]); Serial.print("\t");
-    Serial.println(ypr[2]);
+    Serial.print(yrp[0]); Serial.print("\t");
+    Serial.print(yrp[1]); Serial.print("\t");
+    Serial.println(yrp[2]);
   }
   Serial.println();Serial.println();
 
@@ -346,13 +615,18 @@ void setup() {
   digitalWrite(LEDPIN, LOW);
   noTone(A1);
 
-  String readyMsg = "Flight Computer is Primed and Ready!";
+  String readyMsg = "Flight Computer is Armed and Ready!";
   char rMessage[200];
   int r = 0;
   while((r<200)) {
     rMessage[r]=readyMsg[r];  
     r++;
   }
+
+  delay(1000);
+  launchState = "ARMED";
+  Serial.println();
+  Serial.print("Flight Computer Status: ");Serial.println(launchState);
 
   /*********************************
    * ! FOR OFFLINE TESTING ONLY !  *
@@ -374,229 +648,64 @@ void setup() {
   digitalWrite(LEDPIN, HIGH);
   delay(500);
   noTone(A1);
+
+  delay(1000);
   
   //  delay(1000);
   //  analogWrite(A0, 150);
   
   // Relay
   //  pinMode(A2, OUTPUT);
-  //  digitalWrite(A2, LOW);  
+  //  digitalWrite(A2, LOW);
+
+  // readyForLaunch();
 }
 
-/*************************************************************************
- ******************************* Main loop *******************************
- *************************************************************************/
 
-void loop() {
-  if (!dmpReady) return;
-  if (mpu.dmpGetCurrentFIFOPacket(fifoBuffer)) {
-    mpu.dmpGetQuaternion(&q, fifoBuffer);
-    mpu.dmpGetGravity(&gravity, &q);
-    mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
-    mpu.dmpGetAccel(&aa, fifoBuffer);
-    mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
-
-  /**
-   * @note - The flight CPU should have the following "commands", receivable via 900mHz radio from the launch pad controller
-   * 
-   * @param - STARTUP
-   * @param - ARM
-   * @param - START CAMERA
-   * @param - STOP CAMERA
-   * @param - IGNITION / LAUNCH
-   * @param - DEPLOY / CHUTE
-   * @param - REBOOT
-   */
-
-  /**
-   * ! (WIP)
-   * Rocket camera feed will be handled by raspberry pi zero,
-   * using a configuration similar to what is outlined here:
-   * https://automaticaddison.com/2-way-communication-between-raspberry-pi-and-arduino/
-   * 
-   * The only expected obstacle at this time is going to be streaming the video to the ground computer,
-   * because I don't think sending video signals over radio is going to be a good idea (or work at all).
-   */
-
-  
-/******************************************
- * ! (WIP)
- *  Check rocket has not surpassed apogee * 
- ******************************************/
-//  altitude = bme.readAltitude(SEALEVELPRESSURE_HPA);
-//  if (altitude - lastAlt <= -1) {
-//    delay(100);
-//    altitude = bme.readAltitude(SEALEVELPRESSURE_HPA);
-//    if (altitude - lastAlt <= -2) {
-//      delay(100);
-//      altitude = bme.readAltitude(SEALEVELPRESSURE_HPA);
-//      if (altitude - lastAlt <= -3) {
-//        apogee = lastAlt - 3;
-//        delay(150);
-//        deploy();
-//      } else {
-//      lastAlt = altitude;
-//      }
-//    } else {
-//      lastAlt = altitude;
-//      } 
-//   } else {
-//    lastAlt = altitude;
-//   }
+/************************************************************************/
+/************************ CPU Armed Hype Song ;) ************************/
+/************************************************************************/
+#define NOTE_B4  494
+#define NOTE_D5  587
+#define NOTE_E5  659
+#define NOTE_FS5 740
+#define NOTE_GS5 831
+#define NOTE_A5  880
+#define NOTE_B5  988
+#define REST      0
 
 
-//   if (chutesFired == true) {
-//    // BEGIN DESCENT // 
-//        analogWrite(A0,150);
-//        delay(100);
-//        analogWrite(A0, 0);
-//        delay(100);
-//        analogWrite(A0,150);
-//        delay(100);
-//        analogWrite(A0, 0);
-//        delay(100);
-//        touchdown();
-//   }
+int tempo = 169;
+int buzzer = 15;
 
-  // Convert Yaw/Pitch/Roll to readable values   
-  ypr[0] = ypr[0] * 180/M_PI;
-  ypr[1] = ypr[1] * 180/M_PI;
-  ypr[2] = ypr[2] * 180/M_PI;
+int melody[] = {
+  NOTE_FS5,8, NOTE_FS5,8,NOTE_D5,8, NOTE_B4,8, REST,8, NOTE_B4,8, REST,8, NOTE_E5,8, 
+  REST,8, NOTE_E5,8, REST,8, NOTE_E5,8, NOTE_GS5,8, NOTE_GS5,8, NOTE_A5,8, NOTE_B5,8,
+  NOTE_A5,8, NOTE_A5,8, NOTE_A5,8, NOTE_E5,8, REST,8, NOTE_D5,8, REST,8, NOTE_FS5,8, 
+  REST,8, NOTE_FS5,8, REST,8, NOTE_FS5,8, NOTE_E5,8, NOTE_E5,8, NOTE_FS5,8, NOTE_E5,8,
 
-  // Complementary filter - combine acceleromter and gyro angle values
-  ypr[1] = 0.96 * ypr[1] + 0.04 * aaReal.y;
-  ypr[2] = 0.96 * ypr[2] + 0.04 * aaReal.x;
+  NOTE_FS5,8, NOTE_FS5,8,NOTE_D5,8, NOTE_B4,8, REST,8, NOTE_B4,8, REST,8, NOTE_E5,8, 
+  REST,8, NOTE_E5,8, REST,8, NOTE_E5,8, NOTE_GS5,8, NOTE_GS5,8, NOTE_A5,8, NOTE_B5,8,
+  NOTE_A5,8, NOTE_A5,8, NOTE_A5,8, NOTE_E5,8, REST,8, NOTE_D5,8, REST,8, NOTE_FS5,8, 
+  REST,8, NOTE_FS5,8, REST,8, NOTE_FS5,8, NOTE_E5,8, NOTE_E5,8, NOTE_FS5,8, NOTE_E5,8,
+};
 
-  // Map the values of the MPU6050 sensor from -90 to 90 to values suitable for the servo control from 0 to 180
-  int servo0Value = map(ypr[1], -90, 90, 0, 180);
-  int servo1Value = map(ypr[1], -90, 90, 0, 180);
-  
-  // Control the servos according to the MPU6050 orientation
-  servo0.write(servo0Value);
-  servo1.write(servo1Value);
+int notes = sizeof(melody) / sizeof(melody[0]) / 2;
 
-  /***************************************
-   *    ? Get current battery level ?
-   * ! REMOVE WHEN BATTERY IS UNPLUGGED  !
-   **************************************/
-  // // Get current battery level
-  // float measuredvbat = analogRead(VBATPIN);
-  // measuredvbat *= 2;
-  // measuredvbat *= 3.3;
-  // measuredvbat /= 1024;
+int wholenote = (60000 * 4) / 169;
 
-  /**********************************
-   * Convert collected data to JSON *
-   **********************************/
-  String Payload = "\"{";
-  Payload += "\"Temperature\":";
-  Payload += bme.readTemperature();
-  Payload += ",""\"Pressure\":";
-  Payload += (bme.readPressure() / 100.0F);
-  Payload += ",""\"Altitude\":";
-  Payload += bme.readAltitude(SEALEVELPRESSURE_HPA);
-  Payload += ",""\"Humidity\":";
-  Payload += bme.readHumidity();
-  Payload += ",""\"Yaw\":";
-  Payload += ypr[0];
-  Payload += ",""\"Pitch\":";
-  Payload += ypr[1];
-  Payload += ",""\"Roll\":";
-  Payload += ypr[2];
-  Payload += ",""\"X\":";
-  Payload += calculateXDisplacement(aaReal.x);
-  Payload += ",""\"Y\":";
-  Payload += calculateYDisplacement(aaReal.y);
-  Payload += ",""\"Z\":";
-  Payload += calculateZDisplacement(aaReal.z);
+int divider = 0, noteDuration = 0;
 
-  //  ! (WIP - Battery Status)
-  // Payload += ",""\"Battery Voltage\":";
-  // Payload += measuredvbat;
-
-  /* ! (WIP - Servo Angle of Attack tracking) */
-  // Payload += ",""\"Servo0 AoA\":";
-  // Payload += servo0Value;
-  // Payload += ",""\"Servo1 AoA\":";
-  // Payload += servo1Value;
-//  Payload += "}";
-  
-  char packet[200];
-  int i = 0;
-  int sizeOf = 200;
-  int offset = 0;
-  
-  while((i<sizeOf))
-  {
-      packet[i]=Payload[i];  
-      i++;
+void readyForLaunch() {
+  for (int thisNote = 0; thisNote < notes * 2; thisNote = thisNote + 2) {
+    divider = melody[thisNote + 1];
+    if (divider > 0) {
+      noteDuration = (wholenote) / divider;
+    } else if (divider < 0) {
+      noteDuration = (wholenote) / abs(divider);
+    }
+    tone(buzzer, melody[thisNote], noteDuration * 0.9);
+    delay(noteDuration);
+    noTone(buzzer);
   }
-  
-  /*********************************
-   * ! FOR OFFLINE TESTING ONLY !  *
-   * !! REMOVE WHEN USING RF !!    *
-   *********************************/
-  Serial.println(packet);
-
-  /*********************************
-   *  ? LoRa Payload transmission ?
-   * ! REMOVE WHEN TESTING OFFLINE !
-    *******************************/
-  // rf95.send((uint8_t *)packet, 200);
-  // delay(10);
-  // rf95.waitPacketSent();
-  }
-}
-
-
-//void deploy() {
-//  chutesFired = true;
-//  // Fire relay
-//  digitalWrite(A2, HIGH);
-//  delay(1000);
-//  digitalWrite(A2, LOW);
-//  delay(100);
-//}
-//
-//void touchdown() {
-//  if (altitude - lastAlt == 0) {
-//    delay(100);
-//    altitude = bme.readAltitude(SEALEVELPRESSURE_HPA);
-//    if (altitude - lastAlt == 0) {
-//      delay(100);
-//      altitude = bme.readAltitude(SEALEVELPRESSURE_HPA);
-//      if (altitude - lastAlt == 0) {
-//        landed = true;
-//        delay(150);
-//      } else {
-//        lastAlt = altitude;
-//      }
-//    } else {
-//      lastAlt = altitude;
-//    }
-//   } else {
-//    lastAlt = altitude;
-//   }
-//}
-
-/**
- * TODO: Implement a Kalman Filter / function to better process diff between
- * TODO: first and second sensor readings to smooth out roll rate analysis
- */
-
-
-// XYZ Position Calculations (WIP - currently just applying a complimentary filter to accel data)
-float calculateXDisplacement(float accelX) {
-  xPos = 0.96 * xPos + 0.04 * accelX;
-  return xPos;
-}
-
-float calculateYDisplacement(float accelY) {
-  yPos = 0.96 * yPos + 0.04 * accelY;
-  return yPos;
-}
-
-float calculateZDisplacement(float accelZ) {
-  zPos = 0.96 * zPos + 0.04 * accelZ;
-  return zPos;
 }
