@@ -117,13 +117,12 @@ void dmpDataReady() {
 /***************** e_mea: Measurement Uncertainty **********/
 /***************** e_est: Estimation Uncertainty ***********/
 /****************** q: Process Noise  **********************/
-  SimpleKalmanFilter xKalmanFilter(1, 1, 0.01);
-  SimpleKalmanFilter yKalmanFilter(1, 1, 0.01);
-  SimpleKalmanFilter zKalmanFilter(1, 1, 0.01);
+  SimpleKalmanFilter xKalmanFilter(2, 1, 0.001);
+  SimpleKalmanFilter yKalmanFilter(2, 1, 0.001);
+  SimpleKalmanFilter zKalmanFilter(2, 1, 0.001);
   SimpleKalmanFilter yawKalmanFilter(1, 1, 0.01);
   SimpleKalmanFilter pitchKalmanFilter(1, 1, 0.01);
   SimpleKalmanFilter rollKalmanFilter(1, 1, 0.01);
-
 
 
   /*************************/
@@ -282,7 +281,12 @@ void loop() {
     Payload += ",""\"Pressure\":";
     Payload += (bme.readPressure() / 100.0F);
     Payload += ",""\"Altitude\":";
-    Payload += bme.readAltitude(SEALEVELPRESSURE_HPA);
+    /**
+     * TODO
+     * Attempting a multi-data kalman filter to reduce altitude bias, but will need to remap x/y values when IMU
+     * is installed on custom PCB due to change in board mount orientation
+     */
+    Payload += calculateAltitude(bme.readAltitude(SEALEVELPRESSURE_HPA), aaReal.y);
     Payload += ",""\"Humidity\":";
     Payload += bme.readHumidity();
     Payload += ",""\"Yaw\":";
@@ -377,17 +381,36 @@ void loop() {
 // XYZ Position Calculations
 float calculateXDisplacement(float accelX) {
   xPos = xKalmanFilter.updateEstimate(accelX);
+//  xPos = calculateDistance(xPos, accelX, millis());
   return xPos;
 }
 
 float calculateYDisplacement(float accelY) {
   yPos = yKalmanFilter.updateEstimate(accelY);
+//  yPos = calculateDistance(yPos, accelY, millis());
   return yPos;
 }
 
 float calculateZDisplacement(float accelZ) {
   zPos = zKalmanFilter.updateEstimate(accelZ);
+//  zPos = calculateDistance(zPos, accelZ, millis());
   return zPos;
+}
+
+float calculateAltitude(float alt, float accel) {
+  // Create a new kalman filter
+  SimpleKalmanFilter altitudeKalmanFilter(1, 1, 0.01);
+  // Set altitude to accelerometer 
+  //  float altitude = bme.seaLevelForAltitude(accel, (bme.readPressure() / 100.0F));
+  float altitude = altitudeKalmanFilter.updateEstimate(alt);
+  return altitude;
+}
+
+
+float calculateDistance(float v, float accel, float t) {
+  float velocity = v + accel * t;
+  float distance = velocity * t + 0.5 * accel * pow(t, 2);
+  return distance;
 }
 
 /***********************************************************************************************/
