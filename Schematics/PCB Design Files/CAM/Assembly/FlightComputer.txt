@@ -1,0 +1,12 @@
+Partlist exported from /Users/jordangamache/Arduino-Flight-Computer/Schematics/PCB Design Files/FlightComputer.sch at 9/29/22 06:01
+
+Qty Value         Device           Package       Parts Description                                                                                                       
+1                 HEADER-1X12      1X12_ROUND    JP3                                                                                                                     
+1                 HEADER-1X16ROUND 1X16_ROUND    JP2   PIN HEADER                                                                                                        
+1                 HEADER-1X670MIL  1X06_ROUND_70 JP4   PIN HEADER                                                                                                        
+1                 HEADER-1X6ROUND  1X06_ROUND    JP1   PIN HEADER                                                                                                        
+1                 HEADER-1X770MIL  1X07_ROUND_70 JP5   PIN HEADER                                                                                                        
+1                 LED5MM           LED5MM        LED1  LED                                                                                                               
+1                 R-US_0207/15     0207/15       R1    RESISTOR, American symbol                                                                                         
+1   EG1213        EG1213           EG1213        S1    E-Switch right-angle slide SPDT Part #EG1213                                                                      
+1   SPEAKER/AL60P SPEAKER/AL60P    AL60P         SP1   SPEAKER Source: BuerklinAdded PS12 (for part # PS1240 piezo) http://www.ladyada.net/library/pcb/eaglelibrary.html 
