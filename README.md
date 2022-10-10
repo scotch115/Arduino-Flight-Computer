@@ -2,16 +2,15 @@
 
 Arduino-based IMU telemetry system for model rockets. 
 
-Phase 1: Build a "weather station" to learn basics of handling sensor data  
-- (bonus round: design a custom PCB!)
+Phase 1: Build a basic Arduino project to learn basics of handling sensor data and developing on an MCU
 
-Phase 2: Using knowledge from Phase 1, design and build a custom flight computer using accessible components and write flight-capable software.
+Phase 2: Design and build a custom flight computer using accessible components and write flight-capable software.
 
-Phase 3: Design and build some form of ground-control system to communicate with flight computer, handle launch sequence and startup, relay data from flight computer to laptop.
+Phase 3: Design and build a ground-control system to communicate with flight computer, handle launch sequence and startup, transmit data to and from the flight computer to a laptop.
 
-Phase 4: Design and assemble rocket airframe, mount flight computer and Rotation Control System (RCS but not that kind ;P ), and test telemetry.
+Phase 4: Design and assemble the rocket airframe, mount the flight computer and Rotation Control System (RCS but not that kind ;P ), and test avionics and telemetry.
 
-Phase 5: Test chute ejection system and determine required powder level.
+Phase 5: Build and test chute ejection system and determine required powder charge level.
 
 Phase 6: Launch! 🚀
 
@@ -30,22 +29,27 @@ The MK II PCB was carefully redesigned to improve upon the Mk I's failures by ut
 <img src="Images/Mk_II_B.png" width="40%" />
 
 ## Update:
-Custom PCB worked after a slight modification to the electrical grounding system. 
+Custom PCB worked after a slight modification to the electrical grounding system. Further research concluded that a "common ground" pin would have been more efficient and effective, than multiple pins.
 
 <img src="Images/PCB-test.PNG" width="40%" />
 
 
 # Phase II - Development
 ## Flight Computer
-This is the assembled Mk.1 version of the flight computer, equipped with a barometer and IMU. Beta Ground Control system is functional and connects to the flight computer and the node-red server for data mapping.  
+This is the assembled Mk.1 version of the flight computer, equipped with a barometer and IMU for tracking altitude, temperature, orientation, and velocity.
 
 <img src="Images/flightCPU.PNG" width="40%" style="transform: rotate(270deg); margin-top: 65px; margin-bottom: 80px;" />
 <img src="Images/groundCtrl.PNG" width="40%" style="transform: rotate(270deg); margin-top: 65px; margin-bottom: 80px;"/>
   
 
-> UPDATE 
+> UPDATE (MK. II)
 >
 > The flight computer has been upgraded to use the Adafruit Feather M0 with LoRa Radio @900Mhz, and the onboard IMU has been upgraded to the MPU 6050 with 6 DOF (and gyroscope!).
+
+### MK.III
+After working through various software iterations, the prototype board was complete and functional, but rather messy and utilized more patch wires than I preffered. Using the skills I learned from the PCB design in Phase 1, I began designing a new flight computer PCB, with the intent of using the same core components from the prototype board, allowing an easy transition of functionality, and requiring litte to no software logic changes. The Blep flight computer was developed, and serves as a major improvement in terms of efficiency, durability, and technological advancement. Having learned from my mistakes with the Phase 1 power management, I introduced a single common ground via on the PCB, as well as an entire "ground plane" within the layers of the PCB to ensure that all of the routes on the front and back of the board share a truly **common** ground.
+
+<img src="Images/blep.png" width="40%" style="margin-top: 65px; margin-bottom: 80px;" />
 
 # Phase III - Ground Control
 ## Mk. I
@@ -56,12 +60,12 @@ The AirLift Wi-Fi Co-Processor on both the Adalogger and Metro are able to succe
 
 
 ## Mk. II
-When the flight computer software is complete, the ground control system will be updated. Now that the onboard telemtry has shifted to primarily use 900Mhz radio, the plan for communicating with the rocket is to send information and data from the flight computer to a computer on the launch pad via radio, then relay the data received to the Mk.1 "ground control" computer using wifi, which will feed the data received into the node-red server for analysis and logging. The only major obstacle going this route is the increased latency of sending data over multiple wireless protocols, and processing it using multiple microprocessors. Much testing will need to be done before this system is launch-ready.
+When the flight computer software is complete, the ground control system will be updated. Now that the onboard telemtry has shifted to use 900Mhz radio, the communication with the rocket will also be updated to use radio, and the data received by the ground control computer will be sent to a new server for analysis and logging. The new data analysis server utilizes Serial Studio instead of node-red, which is significantly more robust and efficient when dealing with high-speed data input, and doesn't suffer from the read/write operations to graphs, but still provides a JSON file as output for post-launch analysis. The primary MCU for the ground control computer will be a Teensy 3.2, connected to a LoRa Featherwing using the Teensy-Feather adapter board. 
 
 
 # Phase IV - Rocket Design and Construction 
 > ~~Currently doing research and teaching myself rocket mechanics to design and build a stable, efficient rocket.~~  
-> UPDATE (9/2022): The rocket airframe is being designed simultaneous with Phase II, and rudimentary schematics will be included in this repo for future use. Old PCB schematics have been scrubbed from the project, as they are no longer relevant or necessary. Airframe construction will likely begin in the order planned.
+> UPDATE (9/2022): The rocket airframe is being designed simultaneous with Phase II, and rudimentary schematics will be included in this repo for future use. Old PCB schematics have been scrubbed from the project, as they are no longer relevant or necessary, and have been replaced by the Blep flight computer PCB files. Airframe construction will likely begin in the order planned.
 
 
 # Phase V - Chute Ejection System
