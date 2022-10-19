@@ -5983,12 +5983,7 @@ Jordan Gamache © 2022</text>
 <wire x1="96.52" y1="81.28" x2="83.82" y2="81.28" width="0.1524" layer="91"/>
 <junction x="83.82" y="81.28"/>
 <pinref part="JP3" gate="G$1" pin="11"/>
-<wire x1="83.82" y1="81.28" x2="83.82" y2="71.12" width="0.1524" layer="91"/>
-<pinref part="JP4" gate="A" pin="5"/>
-<wire x1="83.82" y1="71.12" x2="83.82" y2="58.42" width="0.1524" layer="91"/>
-<wire x1="142.24" y1="71.12" x2="83.82" y2="71.12" width="0.1524" layer="91"/>
-<label x="129.54" y="71.12" size="1.778" layer="95"/>
-<junction x="83.82" y="71.12"/>
+<wire x1="83.82" y1="81.28" x2="83.82" y2="58.42" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="SDA" class="0">
@@ -5999,6 +5994,12 @@ Jordan Gamache © 2022</text>
 <wire x1="5.08" y1="73.66" x2="86.36" y2="73.66" width="0.1524" layer="91"/>
 <pinref part="JP3" gate="G$1" pin="12"/>
 <wire x1="86.36" y1="58.42" x2="86.36" y2="73.66" width="0.1524" layer="91"/>
+<pinref part="JP4" gate="A" pin="5"/>
+<wire x1="142.24" y1="71.12" x2="91.44" y2="71.12" width="0.1524" layer="91"/>
+<wire x1="91.44" y1="71.12" x2="91.44" y2="73.66" width="0.1524" layer="91"/>
+<wire x1="91.44" y1="73.66" x2="86.36" y2="73.66" width="0.1524" layer="91"/>
+<junction x="86.36" y="73.66"/>
+<label x="129.54" y="71.12" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="3.3V" class="0">
