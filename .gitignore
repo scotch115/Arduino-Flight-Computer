@@ -1,3 +1,4 @@
-src/barometer/keys.h
-src/groundControl/keys.h
+Schematics/PCB Design Files/FlightComputer.b#*
+Schematics/PCB Design Files/FlightComputer.s#*
 .vscode
+flows.json

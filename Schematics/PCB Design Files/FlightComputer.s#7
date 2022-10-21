@@ -5805,6 +5805,7 @@ Source: http://www.osram.convergy.de/</description>
 <sheet>
 <plain>
 <text x="30.48" y="33.02" size="1.778" layer="94">BREAKOUTS</text>
+<frame x1="-43.18" y1="-55.88" x2="266.7" y2="149.86" columns="8" rows="5" layer="94"/>
 </plain>
 <instances>
 <instance part="S1" gate="1" x="99.06" y="38.1" smashed="yes" rot="R270">
