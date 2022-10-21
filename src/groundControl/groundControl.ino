@@ -1,18 +1,7 @@
 #include "Wire.h"
 #include <SPI.h>
 #include <RH_RF95.h>
-
-/************ Radio Setup ***************/
-// Change to 915.0 or other frequency, must match RX's freq!
-#define RF95_FREQ 915.0
-
-// Teensy w/ Lora Radio Featherwing
-
-#define RFM95_CS      10
-#define RFM95_INT     2
-#define RFM95_RST     11
-
-#define LEDPIN 23
+#include "config.h"
 
 // Singleton instance of the radio driver
 RH_RF95 rf95(RFM95_CS, RFM95_INT);
@@ -71,23 +60,27 @@ void loop() {
     delay(500);
     Serial.println("Waiting for data...");
     delay(1000);
-  // if (rf95.available()) {
-  //   // Should be a message for us now   
-  //   uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
-  //   uint8_t len = sizeof(buf);
-  //   if (rf95.recv(buf, &len)) {
-  //     if (!len) return;
-  //     buf[len] = 0;
-  //    Serial.print("Received [");
-  //    Serial.print(len);
-  //    Serial.print("]: ");
-  //    Serial.print("RSSI: ");
-  //    Serial.println(rf95.lastRssi(), DEC);
-  //     Serial.println((char*)buf);
-  //   } else {
-  //     Serial.println("Receive failed");
-  //   }
-  // }
+    if (TELEMETRY == "ACTIVE") {
+      if (rf95.available()) {
+        // Should be a message for us now   
+        uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
+        uint8_t len = sizeof(buf);
+        if (rf95.recv(buf, &len)) {
+          if (!len) return;
+          buf[len] = 0;
+        Serial.print("Received [");
+        Serial.print(len);
+        Serial.print("]: ");
+        Serial.print("RSSI: ");
+        Serial.println(rf95.lastRssi(), DEC);
+          Serial.println((char*)buf);
+        } else {
+          Serial.println("Receive failed");
+        }
+      }
+    } else {
+      Serial.println('Radio module disabled. Connect the antenna and turn on telemetry in the config.h file.');
+    }
 }
 
 void preCheck() {
