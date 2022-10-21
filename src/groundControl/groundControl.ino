@@ -60,6 +60,7 @@ void loop() {
     delay(500);
     Serial.println("Waiting for data...");
     delay(1000);
+
     if (TELEMETRY == "ACTIVE") {
       if (rf95.available()) {
         // Should be a message for us now   
