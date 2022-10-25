@@ -26,27 +26,27 @@ void setup() {
       Fastwire::setup(400, true);
     #endif
 
-  /**********************************
-   *    ? Prep RMF95 for flight ?
-   * ! REMOVE WHEN TESTING OFFLINE  !
-   **********************************/
-  // pinMode(RFM95_RST, OUTPUT);
-  // digitalWrite(RFM95_RST, HIGH);
+  /*   Prep RMF95 for flight   */
+  if (TELEMETRY == "ACTIVE") {
+    pinMode(RFM95_RST, OUTPUT);
+    digitalWrite(RFM95_RST, HIGH);
+  }
   
   Serial.begin(115200);
 
+  // Wait for serial to be available if board is in 'DEBUG' mode
   if (debugState == "ON") {
     while (!Serial) {
-      // Wait for serial to be available (only necessary for current stage of software development)
     }
   }
 
+  // Run pre-flight check
   preCheck();
 }
 
 /*****************************************************************************************************************************************************************************/
 /*****************************************************************************************************************************************************************************/
-/********************************************************************************* flightControl loop *********************************************************************************/
+/************************************************************************* flightControl loop *********************************************************************************/
 /*****************************************************************************************************************************************************************************/
 /*****************************************************************************************************************************************************************************/
 
@@ -72,11 +72,19 @@ void loop() {
   || launchState == "STANDBY") {
     missionBlep(interval, 1200);
     flightControl();
+    if (TELEMETRY == "ACTIVE") {
+      // Check to see if groundControl is available
+      sync();
+    }
     // Reduce power consumption of loop frequency by limiting data collection to 2Hz
     delay(500);
    } else if (launchState == "IDLE") {
     missionBlep(interval, 1000);
     flightControl();
+    if (TELEMETRY == "ACTIVE") {
+      // Check to see if groundControl is available
+      sync();
+    }
     // If flight computer is in 'IDLE' mode, lower to 0.3Hz to further improve battery performance
     delay(3000);
    } else if (launchState == "LIFTOFF"
@@ -94,6 +102,10 @@ void loop() {
   } else if (launchState =="STARTUP") {
     return;
   } else if (launchState == "ERROR") {
+    /**
+     * Crash the program and force engineer(s) to follow standard operating procedures
+     * and power down rocket for safety
+     * */
     Serial.println("ERROR ERROR ERROR ERROR ERROR ERROR ERROR ERROR ERROR ERROR");
     Serial.println("!!!!! POWER DOWN THE ROCKET AND BE SURE TO DISENGAGE THE MOTOR !!!!!");
     Serial.println("!!!!! EVALUATE FLIGHT COMPUTER AND CIRCUITRY BEFORE CONTINUING !!!!!");
@@ -103,14 +115,20 @@ void loop() {
 
     delay(10000);
   } else if (launchState == "TOUCHDOWN") {
+    /* Play a deep, drone note */
+    tone(BUZZER_PIN, 300);
+    /* Beep periodically to help recovery crew find vehicle */
     blep(BUZZER_PIN, 523, 100);
   } else if (launchState == "DEBUG") {
+    /* Do not limit data stream for efficient debugging */
     missionBlep(interval, 1200);
-    // Do not limit 
     flightControl();
   }
 }
 
+/******************************************************************/
+/****************** Main In-Flight Control Logic ******************/
+/******************************************************************/
 void flightControl() {
   if (!dmpReady) return;
     if (mpu.dmpGetCurrentFIFOPacket(fifoBuffer)) {
@@ -121,7 +139,7 @@ void flightControl() {
       mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
 
       /**
-       * ! (WIP)
+       * (WIP) *
        * Rocket camera feed will be handled by raspberry pi zero,
        * using a configuration similar to what is outlined here:
        * https://automaticaddison.com/2-way-communication-between-raspberry-pi-and-arduino/
@@ -132,7 +150,7 @@ void flightControl() {
 
       
       /*************************************************
-       * ! (WIP)
+       * (WIP) *
        *  Check if rocket has reached or passed apogee * 
        *************************************************/
       getVehicleAltitude();
@@ -639,30 +657,61 @@ void transmitData() {
     Payload += "*/";
   }
       
-    char packet[250];
-    int i = 0;
-    int sizeOf = 250;
-    int offset = 0;
-    
-    while((i<sizeOf))
-    {
-        packet[i]=Payload[i];  
-        i++;
-    }
+  char packet[250];
+  int i = 0;
+  int sizeOf = 250;
+  int offset = 0;
+  
+  while((i<sizeOf))
+  {
+      packet[i]=Payload[i];  
+      i++;
+  }
 
-    Serial.println(packet);
+  Serial.println(packet);
 
-    /*********************************
-     *  ? LoRa Payload transmission ?
-     * ! REMOVE WHEN TESTING OFFLINE !
-      *******************************/
-    if (TELEMETRY == "ACTIVE") {
-      rf95.send((uint8_t *)packet, 200);
-      delay(10);
-      rf95.waitPacketSent();
-    }
+  /*******************************/
+  /*  LoRa Payload transmission  */
+  /*******************************/
+  if (TELEMETRY == "ACTIVE") {
+    rf95.send((uint8_t *)packet, 200);
+    delay(10);
+    rf95.waitPacketSent();
+  }
 }
 
+void sync() {
+  if (rf95.available())
+  {
+    // Fetch message from ground control
+    uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
+    uint8_t len = sizeof(buf);
+
+    if (rf95.recv(buf, &len))
+    {
+      RH_RF95::printBuffer("Received: ", buf, len);
+      Serial.print("Got: ");
+      Serial.println((char*)buf);
+      Serial.print("RSSI: ");
+      Serial.println(rf95.lastRssi(), DEC);
+      
+      // Temporary pitch value to audibly distinguish status
+      blep(BUZZER_PIN, 800, 50); 
+
+      // Send a reply
+      uint8_t data[] = "TELEMETRY GOOD";
+      rf95.send(data, sizeof(data));
+      rf95.waitPacketSent();
+      Serial.println("TELEMETRY GOOD");
+    }
+    else
+    {
+      Serial.println("Failed to fetch data from ground control. Trying again, standby...");
+    }
+  }
+}
+
+// Blink and beep to indicate vehicle status after startup
 void missionBlep(float intervalSkip, int pitch) {
   unsigned long missionTime = millis();
     if (missionTime - prevTime >= intervalSkip) {

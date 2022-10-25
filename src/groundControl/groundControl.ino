@@ -8,18 +8,28 @@ RH_RF95 rf95(RFM95_CS, RFM95_INT);
 
 int16_t packetnum = 0;  // packet counter, we increment per transmission
 
-String launchState = "OFF";
+String telemStatus = "OFF";
 
 /*****************************************************************************************************************************************************************************
  *********************************************************************************   Setup   *********************************************************************************
  *****************************************************************************************************************************************************************************/
 
 void setup() {
-  Serial.begin(115200);
-  while (!Serial) {
-
+  /*   Prep RMF95 for flight   */
+  if (TELEMETRY == "ACTIVE") {
+    pinMode(RFM95_RST, OUTPUT);
+    digitalWrite(RFM95_RST, HIGH);
   }
 
+  Serial.begin(115200);
+  
+  // Wait for serial to be available if board is in 'DEBUG' mode
+  if (debugState == "ON") {
+    while (!Serial) {
+    }
+  }
+
+  // Run pre-flight check
   preCheck();
 }
 
@@ -90,19 +100,22 @@ void preCheck() {
   Serial.println();Serial.println();
   delay(2000);
 
-  launchState = "STARTUP";
+  telemStatus = "STARTUP";
   Serial.println();
-  Serial.print("Ground Control Computer Status: ");Serial.println(launchState);
+  Serial.print("Ground Control Computer Status: ");Serial.println(telemStatus);
 
   pinMode(LEDPIN, OUTPUT);
 
-//  // Play bootup sequence sound
-//  for (unsigned int i = 0; i < numTones; i++) {
-//    tone(A1, tones[i]);
-//    delay(50);
-//  }
-//  noTone(A1);
-//  delay(2000);  // time to get serial running
+  if (!mute) {
+    // Play bootup sequence sound
+    for (unsigned int i = 0; i < numTones; i++) {
+      tone(A1, tones[i]);
+      delay(50);
+    }
+    noTone(A1);
+  }
+
+  delay(2000);  // time to get serial running
 
 /*********************************************************
  * Send data to the flight computer to see if it's awake. *
@@ -110,9 +123,7 @@ void preCheck() {
  *********************************************************/
 
   // <Some RF95 code>
-  // Serial.println("Blep Flight Computer Online!");
-  // launchState = "TELEM"; // This means we have a direct radio connection to the flight computer -- congrats!
-
-
+  Serial.println("Blep Flight Computer Online!");
+  telemStatus = "TELEM"; // This means we have a direct radio connection to the flight computer -- congrats!
 
 }
