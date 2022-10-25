@@ -11,3 +11,6 @@
 #define LEDPIN 23
 
 #define TELEMETRY "INACTIVE"
+
+#define debugState "ON"
+#define mute false
